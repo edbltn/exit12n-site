@@ -80,7 +80,7 @@ export function read(sub, park, m) {
   return {
     id: sub.id, typeId: sub.typeId, kind: sub.kind, name: road ? `${base} (${road})` : base, color: sub.color,
     at, centre, coords: sub.coords, widthM: sub.widthM, areaM2: areaOf(sub), votesFor, votesAgainst,
-    net: votesFor.size - votesAgainst.size, createdAt: sub.createdAt,
+    for: votesFor.size, against: votesAgainst.size, net: votesFor.size - votesAgainst.size, createdAt: sub.createdAt,
   };
 }
 
@@ -138,6 +138,23 @@ export function group(items, park) {
   return out;
 }
 
+/** The votes on a thing in words: "4 for, 2 against", leaving out a part that is zero, and nothing when both are.
+ *  These are the direct + and - votes the API holds for a drawing: every vote on the server is a direct one
+ *  (57-flatten-the-route/README.md: links and conditional votes live in the voter's browser, not in the API). */
+export function voteText(votesFor, votesAgainst) {
+  return [votesFor ? `${votesFor} for` : "", votesAgainst ? `${votesAgainst} against` : ""].filter(Boolean).join(", ");
+}
+
+/** How opaque a proposed thing's bubble is: by its net votes (for minus against, the counts its hover shows).
+ *  The highest net among the bubbles shown is fully opaque; a net of 1 or less is the minimum, which still shows
+ *  clearly on the bands; in between it rises in a straight line. When nothing shown has a net above 1, every
+ *  bubble is at the minimum. */
+export const BUBBLE_MIN_OPACITY = 0.3;
+export function bubbleOpacity(net, mostNet) {
+  if (!(mostNet > 1) || net <= 1) return BUBBLE_MIN_OPACITY;
+  return BUBBLE_MIN_OPACITY + (1 - BUBBLE_MIN_OPACITY) * ((Math.min(net, mostNet) - 1) / (mostNet - 1));
+}
+
 export function rank(groups) {
   return [...groups].sort((a, b) => b.net - a.net || b.for - a.for || b.members.length - a.members.length || a.name.localeCompare(b.name));
 }
@@ -146,97 +163,170 @@ function smooth(arr) {
   return arr.map((v, i) => ((arr[i - 1] ?? v) + 2 * v + (arr[i + 1] ?? v)) / 4);
 }
 
-/** The park's width at every section along the ramp, by what covers it: today, and once the proposed paths
- *  with more people for than against are laid over it. A path takes the cells it is drawn on, from whatever
- *  is there; where two overlap the one with more people for it keeps the cell. Both stacks add up to the
- *  park's full width at every section. */
-export function streams(items, park, m) {
+/** Which proposals the line chart shows, in the order they claim ground.
+ *
+ *  `selection` is the final map's own answer (exit12n.org/final/top-proposals.js or its .json snapshot):
+ *  `{ rows }`, the rows in placement order. Each row is one drawing as the final map counts it: id, title,
+ *  typeId, kind, widthM, coords, areaM2, alongRamp { way, alongM }, votesFor, votesAgainst, score. The chart then
+ *  shows exactly those rows in that order, with the row's own title and votes, so a hover reads the same as the
+ *  final map. Only the colour is not in a row: it comes from the live drawing of the same id, else from another
+ *  drawing of its type, else the app's grey for a type with no family.
+ *
+ *  With no selection (`null`: the final map is not live, or did not load) the chart shows a stand-in, every
+ *  drawing with more people for it than against, most people first, and the page says so. The selection is
+ *  never computed here. */
+export function select(items, selection, m = null) {
+  if (selection && Array.isArray(selection.rows)) {
+    const byId = new Map(items.map((i) => [i.id, i]));
+    const byType = new Map(items.map((i) => [i.typeId, i.color]));
+    const shown = selection.rows.map((row) => {
+      const live = byId.get(row.id);
+      const coords = Array.isArray(row.coords) && row.coords.length ? row.coords : live?.coords ?? [];
+      const kind = row.kind ?? live?.kind;
+      const typeId = row.typeId ?? live?.typeId;
+      const votesFor = row.votesFor ?? live?.for ?? 0;
+      const votesAgainst = row.votesAgainst ?? live?.against ?? 0;
+      // the final map measures along two ways; way 1 is the off-ramp, the line drawn here
+      const onLine = row.alongRamp && row.alongRamp.way === 1 && Number.isFinite(row.alongRamp.alongM);
+      return {
+        id: row.id, typeId, kind, name: row.title ?? live?.name ?? typeId,
+        color: live?.color ?? byType.get(typeId) ?? "#9e9e9e",
+        coords, centre: kind === "line" ? coords[Math.floor(coords.length / 2)] : coords[0],
+        widthM: row.widthM ?? live?.widthM ?? 0, areaM2: row.areaM2 ?? live?.areaM2 ?? 0,
+        for: votesFor, against: votesAgainst, net: row.score ?? votesFor - votesAgainst,
+        alongM: onLine ? row.alongRamp.alongM : null, way: row.alongRamp?.way ?? null,
+        createdAt: row.createdAt ?? live?.createdAt ?? 0,
+      };
+    });
+    return { shown, standIn: false, via: selection.via ?? null, at: selection.at ?? null };
+  }
+  const shown = items.filter((i) => i.net >= 1).sort((a, b) => b.net - a.net || b.for - a.for || a.createdAt - b.createdAt);
+  return { shown, standIn: true, via: null, at: null };
+}
+
+/** What the park's own surface classes are called on the page: the app's names, but for two of Eric's words. */
+const COVER_NAMES = { none: "other", "leaf-litter": "woods" };
+
+/** The park's width at every section along the ramp, by what covers it: today, and once the shown proposals
+ *  are laid over it. Every proposal is clipped to the park first: a path takes only the park cells it is drawn
+ *  on, a thing only the share of its footprint that lies on park cells, and what is drawn outside takes nothing.
+ *  Each takes only what is still free, in the order shown, so no ground is counted twice and both stacks add up
+ *  to the park's full width at every section. */
+export function streams(shown, park, m) {
   const K = park.rows[0].length;
   const nc = park.classes.length;
+  const cellM2 = park.cellM * park.binM;
   const today = Array.from({ length: nc }, () => new Array(m.bins).fill(0));
   park.rows.forEach((row, b) => {
     for (const ch of row) if (ch !== ".") today[Number(ch)][b] += park.cellM;
   });
+  const after = today.map((w) => [...w]);
+  const from = Array.from({ length: nc }, () => 0); // m² each class gives up
+  const used = new Map(); // cell -> the share of it already taken
+  const bands = [];
+  const taken = new Map(); // drawing id -> m² it took
 
-  const lines = items.filter((i) => i.kind === "line" && i.net >= 1).sort((a, b) => a.net - b.net || b.createdAt - a.createdAt);
-  const keys = [];
-  const claim = new Map(); // cell -> index into keys
-  for (const it of lines) {
-    const key = `${it.name}|${it.color}`;
-    let k = keys.findIndex((x) => x.key === key);
-    if (k < 0) k = keys.push({ key, label: it.name, color: it.color, members: [] }) - 1;
-    let touched = false;
-    for (let i = 0; i < it.coords.length - 1; i++) {
-      const p = it.coords[i];
-      const q = it.coords[i + 1];
-      const steps = Math.max(1, Math.ceil(Math.hypot(q[0] - p[0], q[1] - p[1])));
-      for (let j = 0; j <= steps; j++) {
-        const a = m.along(p[0] + ((q[0] - p[0]) * j) / steps, p[1] + ((q[1] - p[1]) * j) / steps);
-        if (a.s <= 0 || a.s >= m.length) continue;
-        const b = Math.min(m.bins - 1, Math.floor(a.s / park.binM));
-        const lo = Math.round((a.d - it.widthM / 2 - park.dMin) / park.cellM);
-        const hi = Math.max(lo, Math.round((a.d + it.widthM / 2 - park.dMin) / park.cellM) - 1);
-        for (let c = Math.max(0, lo); c <= Math.min(K - 1, hi); c++) {
-          if (park.rows[b][c] === ".") continue;
-          claim.set(b * K + c, k);
-          touched = true;
+  const take = (band, id, b, c, share) => {
+    const cell = b * K + c;
+    const free = 1 - (used.get(cell) ?? 0);
+    const got = Math.min(free, share);
+    if (got <= 0) return 0;
+    used.set(cell, (used.get(cell) ?? 0) + got);
+    const cls = Number(park.rows[b][c]);
+    after[cls][b] -= got * park.cellM;
+    band.width[b] += got * park.cellM;
+    from[cls] += got * cellM2;
+    taken.set(id, (taken.get(id) ?? 0) + got * cellM2);
+    return got;
+  };
+
+  for (const it of shown) {
+    // one band per drawing, so a hover shows that drawing's own votes, as the final map counts them
+    const band = { key: it.id, kind: "proposed", shape: it.kind, label: it.name, color: it.color, for: it.for, against: it.against, width: new Array(m.bins).fill(0) };
+    bands.push(band);
+    if (it.kind === "line") {
+      const cells = new Set();
+      for (let i = 0; i < it.coords.length - 1; i++) {
+        const p = it.coords[i];
+        const q = it.coords[i + 1];
+        const steps = Math.max(1, Math.ceil(Math.hypot(q[0] - p[0], q[1] - p[1])));
+        for (let j = 0; j <= steps; j++) {
+          const a = m.along(p[0] + ((q[0] - p[0]) * j) / steps, p[1] + ((q[1] - p[1]) * j) / steps);
+          if (a.s <= 0 || a.s >= m.length) continue;
+          const b = Math.min(m.bins - 1, Math.floor(a.s / park.binM));
+          const lo = Math.round((a.d - it.widthM / 2 - park.dMin) / park.cellM);
+          const hi = Math.max(lo, Math.round((a.d + it.widthM / 2 - park.dMin) / park.cellM) - 1);
+          for (let c = Math.max(0, lo); c <= Math.min(K - 1, hi); c++) if (park.rows[b][c] !== ".") cells.add(b * K + c);
         }
       }
+      for (const cell of cells) take(band, it.id, Math.floor(cell / K), cell % K, 1);
+    } else if (it.centre) {
+      const a = m.along(it.centre[0], it.centre[1]);
+      const R = Math.sqrt(it.areaM2 / Math.PI);
+      // clip to the park: only the share of its footprint (a disc of its area) that lies on park cells takes ground
+      let inside = 0;
+      let all = 0;
+      for (let ds = -Math.ceil(R); ds <= Math.ceil(R); ds++) {
+        for (let dd = -Math.ceil(R); dd <= Math.ceil(R); dd++) {
+          if (ds * ds + dd * dd > R * R && (ds || dd)) continue;
+          all++;
+          if (m.cell(a.s + ds, a.d + dd) >= 0) inside++;
+        }
+      }
+      if (!inside) continue; // all of it is outside the park: nothing of the park to take
+      const b0 = Math.max(0, Math.min(m.bins - 1, Math.floor(a.s / park.binM)));
+      const c0 = Math.round((a.d - park.dMin) / park.cellM);
+      const near = []; // the park cells under and around it, nearest first
+      const reachB = Math.ceil(R / park.binM) + 2;
+      const reachC = Math.ceil(R / park.cellM) + 3;
+      for (let b = Math.max(0, b0 - reachB); b <= Math.min(m.bins - 1, b0 + reachB); b++) {
+        for (let c = Math.max(0, c0 - reachC); c <= Math.min(K - 1, c0 + reachC); c++) {
+          if (park.rows[b][c] === ".") continue;
+          near.push([b === b0 && c === c0 ? 0 : Math.hypot((b + 0.5) * park.binM - a.s, park.dMin + c * park.cellM - a.d), b, c]);
+        }
+      }
+      near.sort((p, q) => p[0] - q[0]);
+      let left = (it.areaM2 * inside) / all / cellM2; // the clipped footprint, in cells
+      for (const [, b, c] of near) {
+        if (left <= 1e-9) break;
+        left -= take(band, it.id, b, c, Math.min(1, left));
+      }
     }
-    if (touched) keys[k].members.push(it);
   }
 
-  const after = today.map((w) => [...w]);
-  const taken = keys.map(() => new Array(m.bins).fill(0));
-  const from = Array.from({ length: nc }, () => 0); // m² each class gives up
-  for (const [id, k] of claim) {
-    const b = Math.floor(id / K);
-    const cls = Number(park.rows[b][id % K]);
-    after[cls][b] -= park.cellM;
-    taken[k][b] += park.cellM;
-    from[cls] += park.cellM * park.binM;
-  }
   const area = (w) => w.reduce((a, v) => a + v, 0) * park.binM;
   const order = park.classes.map((c, i) => i).sort((a, b) => (park.classes[a].id === "none") - (park.classes[b].id === "none") || a - b);
   const cover = (widths) => order.filter((i) => area(today[i]) > 0).map((i) => ({
-    key: park.classes[i].id, kind: "cover", label: park.classes[i].id === "none" ? "other" : park.classes[i].id.replace(/-/g, " "), color: park.classes[i].color,
+    key: park.classes[i].id, kind: "cover", label: COVER_NAMES[park.classes[i].id] ?? park.classes[i].id.replace(/-/g, " "), color: park.classes[i].color,
     width: smooth(widths[i]), areaM2: area(widths[i]), givesM2: from[i],
   }));
-  const proposed = keys
-    .map((x, k) => {
-      const people = new Set(x.members.flatMap((i) => [...i.votesFor]));
-      return { key: x.key, kind: "proposed", label: x.label, color: x.color, width: smooth(taken[k]), areaM2: area(taken[k]), people: people.size, drawings: x.members.length };
-    })
-    .filter((p) => p.areaM2 > 0)
-    .sort((a, b) => b.people - a.people || b.areaM2 - a.areaM2);
+  const proposed = bands.map((x) => ({ ...x, width: smooth(x.width), areaM2: area(x.width) })).filter((x) => x.areaM2 > 0);
   const total = today.reduce((a, w) => a + area(w), 0);
   const widths = park.rows.map((row) => [...row].filter((ch) => ch !== ".").length * park.cellM);
   return {
     today: cover(today),
     after: [...proposed, ...cover(after)],
-    proposed,
+    proposed, taken,
     parkAreaM2: total,
-    takenM2: proposed.reduce((a, p) => a + p.areaM2, 0),
+    takenM2: proposed.reduce((a, x) => a + x.areaM2, 0),
     widthMin: Math.min(...widths), widthMax: Math.max(...widths),
   };
 }
 
-/** The proposed things that stand in the park, each with the stretch of ramp (one of the app's blocks) it belongs to. */
-export function objects(items, park, m) {
-  const block = (s) => Math.min(park.config.blockCount - 1, Math.floor((s / m.length) * park.config.blockCount));
+/** The shown things, each at its own distance along the exit (one standing off the park's outline is still
+ *  placed by that distance), and what is there today. */
+export function objects(shown, park, m) {
   const proposed = [];
-  let outside = 0;
-  for (const it of items) {
+  for (const it of shown) {
     if (it.kind !== "point" || !it.centre) continue;
     const a = m.along(it.centre[0], it.centre[1]);
-    if (m.cell(a.s, a.d) < 0) {
-      outside++;
-      continue;
-    }
-    proposed.push({ ...it, s: a.s, block: block(a.s), for: it.votesFor.size, against: it.votesAgainst.size });
+    // the final map's own distance along the off-ramp when it gives one; a row measured along the on-ramp (way 0)
+    // is placed by the nearest point of the line drawn here instead
+    const s = Number.isFinite(it.alongM) ? it.alongM : a.s;
+    proposed.push({ ...it, s: Math.max(0, Math.min(m.length, s)), inPark: m.cell(a.s, a.d) >= 0 });
   }
-  const there = park.courts.map((c) => ({ name: c.label, color: c.color, areaM2: c.areaM2, s: c.s, block: block(c.s) }));
-  return { proposed, there, outside, mostNet: Math.max(1, ...proposed.map((p) => p.net)) };
+  const there = park.courts.map((c) => ({ name: c.label, color: c.color, areaM2: c.areaM2, s: c.s }));
+  return { proposed, there, outside: proposed.filter((o) => !o.inPark).length, mostNet: Math.max(1, ...proposed.map((o) => o.net)) };
 }
 
 /** One row per family of proposal types: every drawing in it, and the people behind them. */
@@ -265,17 +355,19 @@ export function where(g, park) {
   return near(g.s) === near(g.s1) ? `${a} to ${b} m, near ${near(g.s)}` : `${a} to ${b} m, ${near(g.s)} to ${near(g.s1)}`;
 }
 
-export function build(subs, park) {
+/** `selection`: the final map's answer `{ rows, via, at }`, or null for the stand-in (see `select`). */
+export function build(subs, park, selection = null) {
   const m = measure(park);
   const items = subs.map((s) => read(s, park, m));
   const groups = group(items, park);
   const voters = new Set(subs.flatMap((s) => s.votes.map((v) => v.voterId)));
   const people = new Set([...voters, ...subs.map((s) => s.authorId)]);
+  const chosen = select(items, selection, m);
   return {
-    m, items, groups,
+    m, items, groups, chosen,
     ranked: rank(groups),
-    streams: streams(items, park, m),
-    objects: objects(items, park, m),
+    streams: streams(chosen.shown, park, m),
+    objects: objects(chosen.shown, park, m),
     themes: themes(items, park),
     counts: {
       drawings: subs.length,

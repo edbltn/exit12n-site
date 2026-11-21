@@ -1,12 +1,15 @@
 // Draw the three charts from the live submissions and keep them fresh.
 // Every name, colour and number drawn comes from the live data or from park.json (the app's own files).
-import { build, where } from "./model.js";
+import { build, bubbleOpacity, voteText, where } from "./model.js";
 
 const REFRESH_S = 15;
 const API = "https://exit12n-api-katze52zaq-uc.a.run.app/api/submissions";
 // The API answers browsers on exit12n.org. On a local test server it does not, so serve.py forwards it at api/.
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
 const SOURCES = LOCAL ? ["api/submissions", API] : [API];
+// The final map's own selection: the function /final/ runs, or the snapshot it writes when published.
+const FINAL = "https://exit12n.org/final/";
+const FINAL_RETRY_S = 300; // while the final map is not there, look again this often
 
 const INK = "#1b1813";
 const SOFT = "#4f4a40";
@@ -36,68 +39,73 @@ function patterns() {
   ].join("");
 }
 
-/** Circles packed around their middle, the largest first, kept within `half` either side so stretches do not run together. */
-function pack(radii, half) {
-  const at = [];
-  const order = radii.map((r, i) => i).sort((a, b) => radii[b] - radii[a]);
-  const free = (x, y, r) => at.every((c) => Math.hypot(c.x - x, c.y - y) >= c.r + r + 1.5 - 1e-6);
-  for (const i of order) {
-    const r = radii[i];
-    let best = null;
-    const tryAt = (x, y) => {
-      if (!free(x, y, r)) return;
-      const over = Math.max(0, Math.abs(x) + r - half);
-      const cost = x * x + y * y + over * over * 400;
-      if (!best || cost < best.cost) best = { x, y, cost };
-    };
-    if (!at.length) tryAt(0, 0);
-    for (const a of at) {
-      const d = a.r + r + 1.5;
-      for (let k = 0; k < 24; k++) tryAt(a.x + d * Math.cos((k * Math.PI) / 12), a.y + d * Math.sin((k * Math.PI) / 12));
-    }
-    for (let p = 0; p < at.length; p++) {
-      for (let q = p + 1; q < at.length; q++) {
-        const a = at[p];
-        const b = at[q];
-        const da = a.r + r + 1.5;
-        const db = b.r + r + 1.5;
-        const dist = Math.hypot(b.x - a.x, b.y - a.y);
-        if (dist > da + db || dist < 1e-6) continue;
-        const t = (da * da - db * db + dist * dist) / (2 * dist);
-        const hgt = Math.sqrt(Math.max(0, da * da - t * t));
-        const ux = (b.x - a.x) / dist;
-        const uy = (b.y - a.y) / dist;
-        tryAt(a.x + ux * t - uy * hgt, a.y + uy * t + ux * hgt);
-        tryAt(a.x + ux * t + uy * hgt, a.y + uy * t - ux * hgt);
-      }
-    }
-    at.push({ i, x: best.x, y: best.y, r });
-  }
-  const top = Math.min(0, ...at.map((c) => c.y - c.r));
-  const bottom = Math.max(0, ...at.map((c) => c.y + c.r));
-  return { at, top, bottom };
-}
+const votes = voteText;
+const tipOf = (...lines) => lines.filter(Boolean).join("|");
+const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 
 function drawLine(model, park, width) {
   const st = model.streams;
   const ob = model.objects;
   const m = model.m;
-  const W = Math.max(760, width);
-  const X0 = 74;
-  const X1 = W - 14;
+  const W = Math.max(300, width);
+  const narrow = W < 720;
+  const X0 = narrow ? 8 : 74;
+  const X1 = W - (narrow ? 8 : 14);
   const x = (s) => X0 + (s / m.length) * (X1 - X0);
   const xb = (b) => x(Math.min(m.length, (b + 0.5) * park.binM));
-  const PXM = 170 / st.widthMax; // pixels per metre across, the same for bands and bubbles
+  const binOf = (s) => Math.max(0, Math.min(m.bins - 1, Math.floor(s / park.binM)));
+  const PXM = (narrow ? 120 : 170) / st.widthMax; // pixels per metre across, the same for bands and bubbles
   const R = (a) => Math.max(3, PXM * Math.sqrt(a / Math.PI));
-  const blocks = park.config.blockCount;
-  const blockW = (X1 - X0) / blocks;
-  const parts = [];
+  const GAP = 8;
+  const parts = []; // drawn with the line at y = 0: today above (negative), proposed below
+
+  const band = (s, base, dir) => {
+    const near = base.map((y, b) => `${xb(b).toFixed(1)},${y.toFixed(1)}`);
+    const far = base.map((y, b) => `${xb(b).toFixed(1)},${(y + dir * s.width[b] * PXM).toFixed(1)}`).reverse();
+    const d = `M${near.join("L")}L${far.join("L")}Z`;
+    const tip = s.kind === "cover" ? cap(s.label) : tipOf(s.label, votes(s.for, s.against));
+    return `<path d="${d}" fill="${s.color ?? UNCLASSED}" stroke="${PAPER}" stroke-width="0.8" data-tip="${esc(tip)}"/>` +
+      (s.kind === "cover" ? `<path d="${d}" fill="url(#tx-${s.key})" pointer-events="none"/>` : "");
+  };
+  /** Stack bands outward from the line; returns the outer edge at every section. */
+  const stack = (bands, dir) => {
+    let base = Array.from({ length: m.bins }, () => dir * GAP);
+    for (const s of bands) {
+      parts.push(band(s, base, dir));
+      base = base.map((y, b) => y + dir * s.width[b] * PXM);
+    }
+    return base;
+  };
+  const todayEdge = stack(st.today, -1);
+  const afterEdge = stack(st.after, 1);
+
+  // each thing at its own distance along the exit, resting on the outer edge of the bands there. Larger ones are
+  // set first; one that would hide another is moved outward just far enough to leave it showing.
+  const rest = (list, edge, dir) => {
+    const placed = [];
+    for (const o of [...list].sort((p, q) => q.areaM2 - p.areaM2)) {
+      const r = R(o.areaM2);
+      const cx = Math.max(r + 1, Math.min(W - r - 1, x(o.s))); // whole on the page, even at either end
+      let cy = edge[binOf(o.s)] + dir * (r + 3);
+      while (placed.some((q) => Math.hypot(q.cx - cx, q.cy - cy) < 0.6 * (q.r + r))) cy += dir * 2;
+      placed.push({ o, cx, cy, r });
+    }
+    return placed;
+  };
+  const there = rest(ob.there, todayEdge, -1);
+  const proposed = rest(ob.proposed, afterEdge, 1);
+  const bubble = (c, opacity, tip) =>
+    `<circle cx="${c.cx.toFixed(1)}" cy="${c.cy.toFixed(1)}" r="${c.r.toFixed(1)}" fill="${c.o.color}" fill-opacity="${opacity.toFixed(2)}" stroke="${c.o.color}" stroke-width="1.2" data-net="${c.o.net ?? ""}"/>` +
+    `<circle cx="${c.cx.toFixed(1)}" cy="${c.cy.toFixed(1)}" r="${Math.max(c.r, 9).toFixed(1)}" fill="transparent" data-tip="${esc(tip)}"/>`;
+  for (const c of there) parts.push(bubble(c, 0.85, cap(c.o.name)));
+  // a proposed thing is more opaque the more net votes it has; one outside the park looks like any other
+  for (const c of proposed) parts.push(bubble(c, bubbleOpacity(c.o.net, ob.mostNet), tipOf(c.o.name, votes(c.o.for, c.o.against), c.o.inPark ? "" : "outside the park's outline")));
 
   // stop names, on as many rows as they need
   const rows = [];
   const stops = park.stops.map((p) => {
-    const w = textW(p.name, 13);
-    const cx = Math.max(X0 + w / 2 - 20, Math.min(X1 - w / 2 + 6, x(p.s)));
+    const w = textW(p.name, 13) * 1.1; // a little spare, so a name at either end is never cut
+    const cx = Math.max(w / 2 + 2, Math.min(W - w / 2 - 2, x(p.s)));
     let row = rows.findIndex((ends) => ends < cx - w / 2 - 8);
     if (row < 0) row = rows.push(0) - 1;
     rows[row] = cx + w / 2;
@@ -105,79 +113,23 @@ function drawLine(model, park, width) {
   });
   const STOP_ROW = 17;
   const top = rows.length * STOP_ROW + 10;
+  const highest = Math.min(...todayEdge, ...there.map((c) => c.cy - c.r));
+  const lowest = Math.max(...afterEdge, ...proposed.map((c) => c.cy + c.r));
+  const Y0 = Math.ceil(top - highest + 6);
+  const H = Math.ceil(Y0 + lowest + 12);
 
-  // bubbles, packed per stretch of the ramp
-  const packs = (list) => Array.from({ length: blocks }, (_, b) => {
-    const mine = list.filter((o) => o.block === b);
-    return { mine, ...pack(mine.map((o) => R(o.areaM2)), blockW / 2 - 4) };
-  });
-  const there = packs(ob.there);
-  const proposed = packs(ob.proposed);
-  const thereH = Math.max(0, ...there.map((p) => p.bottom - p.top));
-  const proposedH = Math.max(0, ...proposed.map((p) => p.bottom - p.top));
-
-  const half = st.widthMax * PXM;
-  const GAP = 8;
-  const Y0 = top + thereH + (thereH ? 14 : 0) + half + GAP;
-
-  const band = (s, base, dir) => {
-    const near = base.map((y, b) => `${xb(b).toFixed(1)},${y.toFixed(1)}`);
-    const far = base.map((y, b) => `${xb(b).toFixed(1)},${(y + dir * s.width[b] * PXM).toFixed(1)}`).reverse();
-    const d = `M${near.join("L")}L${far.join("L")}Z`;
-    const tip = s.kind === "cover"
-      ? `${s.label}|${m2(s.areaM2)} of the park along the exit`
-      : `${s.label}|${people(s.people)} for it${s.drawings > 1 ? `, drawn ${s.drawings} times` : ""}|${m2(s.areaM2)} of the park`;
-    const fill = s.color ?? UNCLASSED;
-    return `<path d="${d}" fill="${fill}" stroke="${PAPER}" stroke-width="0.8" data-tip="${esc(tip)}"/>` +
-      (s.kind === "cover" ? `<path d="${d}" fill="url(#tx-${s.key})" pointer-events="none"/>` : "");
-  };
-  const stack = (bands, dir) => {
-    let base = Array.from({ length: m.bins }, () => Y0 + dir * GAP);
-    for (const s of bands) {
-      parts.push(band(s, base, dir));
-      base = base.map((y, b) => y + dir * s.width[b] * PXM);
-    }
-  };
-  stack(st.today, -1);
-  stack(st.after, 1);
-
-  const bubble = (o, cx, cy, r, opacity, tip) =>
-    `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="${o.color}" fill-opacity="${opacity.toFixed(2)}" stroke="${o.color}" stroke-width="1.2"/>` +
-    `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${Math.max(r, 11).toFixed(1)}" fill="transparent" data-tip="${esc(tip)}"/>`;
-  there.forEach((p, b) => {
-    const cx = X0 + (b + 0.5) * blockW;
-    const cy0 = top + thereH - p.bottom;
-    for (const c of p.at) {
-      const o = p.mine[c.i];
-      parts.push(bubble(o, cx + c.x, cy0 + c.y, c.r, 0.85, `${o.name}, here today|${m2(o.areaM2)}`));
-    }
-  });
-  const proposedTop = Y0 + GAP + half + 16;
-  proposed.forEach((p, b) => {
-    const cx = X0 + (b + 0.5) * blockW;
-    const cy0 = proposedTop - p.top;
-    for (const c of p.at) {
-      const o = p.mine[c.i];
-      const votes = `${people(o.for)} for${o.against ? `, ${o.against} against` : ""}`;
-      parts.push(bubble(o, cx + c.x, cy0 + c.y, c.r, o.net >= 1 ? 0.25 + 0.75 * (o.net / ob.mostNet) : 0.04, `${o.name}|${votes}|${m2(o.areaM2)}`));
-    }
-  });
-  const H = Math.ceil(proposedTop + proposedH + 12);
-
-  // the line, its stops, and the ends of the stretches the bubbles are gathered by
-  const ticks = Array.from({ length: blocks + 1 }, (_, b) => `<line x1="${(X0 + b * blockW).toFixed(1)}" y1="${Y0 - 9}" x2="${(X0 + b * blockW).toFixed(1)}" y2="${Y0 + 9}" stroke="${INK}" stroke-width="1.5"/>`).join("");
   const stopMarks = stops.map((p) => {
     const ly = 13 + p.row * STOP_ROW;
     return `<line x1="${x(p.s).toFixed(1)}" y1="${ly + 5}" x2="${x(p.s).toFixed(1)}" y2="${Y0}" stroke="${INK}" stroke-opacity="0.3" stroke-width="1"/>` +
       `<text x="${p.cx.toFixed(1)}" y="${ly}" text-anchor="middle" font-size="13" fill="${INK}" stroke="${PAPER}" stroke-width="3" paint-order="stroke">${esc(p.name)}</text>` +
       `<circle cx="${x(p.s).toFixed(1)}" cy="${Y0}" r="6" fill="${PAPER}" stroke="${INK}" stroke-width="2.5"/>`;
   }).join("");
-  const side = (y, t) => `<text x="0" y="${y}" font-size="14" fill="${INK}" class="caps">${t}</text>`;
+  const side = (y, t) => `<text x="${narrow ? X0 + 4 : 0}" y="${y}" font-size="14" fill="${INK}" class="caps" stroke="${PAPER}" stroke-width="3" paint-order="stroke">${t}</text>`;
 
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="The exit as a line with its stops. Above it, the park's width today by land cover; below it, the same width once the proposed paths are laid over it; proposed things as bubbles.">
-    <defs>${patterns()}</defs>${parts.join("")}
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="The exit as a line with its stops. Above it, the park's width today by land cover; below it, the same width with the shown proposals laid over it; each proposed thing is a bubble at its distance along the exit.">
+    <defs>${patterns()}</defs><g transform="translate(0 ${Y0})">${parts.join("")}</g>
     <line x1="${X0}" y1="${Y0}" x2="${X1}" y2="${Y0}" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>
-    ${ticks}${stopMarks}${side(Y0 - GAP - 8, "Today")}${side(Y0 + GAP + 16, "Proposed")}</svg>`;
+    ${stopMarks}${side(Y0 - GAP - 8, "Today")}${side(Y0 + GAP + 16, "Proposed")}</svg>`;
 }
 
 function lineKey(model) {
@@ -185,9 +137,10 @@ function lineKey(model) {
   const swatch = (s) => s.kind === "cover"
     ? `<svg class="key" viewBox="0 0 16 16"><rect width="16" height="16" fill="${s.color ?? UNCLASSED}"/><rect width="16" height="16" fill="url(#tx-${s.key})"/></svg>`
     : `<span class="key" style="background:${s.color}"></span>`;
-  const cover = st.today.map((s) => `<span class="item">${swatch(s)}${esc(s.label)}</span>`).join("");
-  const proposed = st.proposed.map((s) => `<span class="item">${swatch(s)}${esc(s.label)}${s.drawings > 1 ? ` ×${s.drawings}` : ""}</span>`).join("");
-  return `<span class="caps">Today</span> ${cover}` + (proposed ? `<br><span class="caps">Proposed paths</span> ${proposed}` : "");
+  const item = (s) => `<span class="item">${swatch(s)}${esc(s.label)}</span>`;
+  const seen = new Set();
+  const paths = st.proposed.filter((s) => s.shape === "line" && !seen.has(`${s.label}|${s.color}`) && seen.add(`${s.label}|${s.color}`));
+  return `<span class="caps">Today</span> ${st.today.map(item).join("")}` + (paths.length ? `<br><span class="caps">Proposed paths</span> ${paths.map(item).join("")}` : "");
 }
 
 // ---------- 2. the shortlist ----------
@@ -211,7 +164,7 @@ function drawShortlist(model, park, W) {
   const row = (g, n) => {
     const backed = g.net >= park.config.winSupport;
     const times = g.members.length > 1 ? `<tspan fill="${FAINT}" font-size="13"> ×${g.members.length}</tspan>` : "";
-    const tip = `${g.name}|${where(g, park)}|${people(g.for)} for${g.against ? `, ${g.against} against` : ""}${g.members.length > 1 ? `, drawn ${g.members.length} times` : ""}`;
+    const tip = tipOf(g.name, where(g, park), votes(g.for, g.against));
     parts.push(`<text x="18" y="${y + 18}" text-anchor="end" font-size="14" fill="${FAINT}">${n}</text>`);
     if (narrow) {
       parts.push(`<text x="28" y="${y + 18}" font-size="16" fill="${INK}">${esc(g.name)}${times}</text>`);
@@ -263,9 +216,8 @@ function drawThemes(model, park, W) {
       const sx = LABEL + (k % perLine) * STEP;
       const sy = y + Math.floor(k / perLine) * STEP;
       const style = it.net >= park.config.winSupport ? `fill="${SIENNA}"` : it.net === 1 ? `fill="${SIENNA}" fill-opacity="0.45"` : `fill="none" stroke="${FAINT}" stroke-width="1.2"`;
-      const votes = `${people(it.votesFor.size)} for${it.votesAgainst.size ? `, ${it.votesAgainst.size} against` : ""}`;
       const place = it.at ? `${Math.round(it.at.s / 10) * 10} m along the ramp` : "off the ramp";
-      parts.push(`<rect x="${sx + 0.6}" y="${sy + 3.6}" width="${SQ - 1.2}" height="${SQ - 1.2}" rx="2" ${style} data-tip="${esc(`${it.name}|${place}|${votes}`)}"/>`);
+      parts.push(`<rect x="${sx + 0.6}" y="${sy + 3.6}" width="${SQ - 1.2}" height="${SQ - 1.2}" rx="2" ${style} data-tip="${esc(tipOf(it.name, place, votes(it.votesFor.size, it.votesAgainst.size)))}"/>`);
     });
     const lines = Math.ceil(n / perLine);
     if (!narrow) parts.push(`<text x="${LABEL + Math.min(n, perLine) * STEP + 10}" y="${y + 15}" font-size="14" fill="${SOFT}">${summary}</text>`);
@@ -283,26 +235,54 @@ let lastJson = "";
 let lastSubs = null;
 let lastGood = null;
 let source = 0;
+let finalMap = null; // the final map's module, once it has loaded
+let selection = null; // its answer: { rows, via, at }, or null while the stand-in shows
+let finalTried = 0;
+
+/** Ask the final map which proposals it shows: its own function first, its snapshot second, else nothing. */
+async function askFinalMap() {
+  try {
+    finalMap ??= await import(`${FINAL}top-proposals.js?t=${Date.now()}`);
+    const r = await finalMap.topProposals();
+    const rows = Array.isArray(r) ? r : r?.rows;
+    if (Array.isArray(rows)) return { rows, via: "module", at: null };
+  } catch {
+    // not live yet, or its own read of the API was refused here (a local test server): try the snapshot
+  }
+  try {
+    const r = await fetch(`${FINAL}top-proposals.json`, { cache: "no-store" });
+    if (r.ok) {
+      const j = await r.json();
+      if (Array.isArray(j?.rows)) return { rows: j.rows, via: "snapshot", at: j.at ?? null };
+    }
+  } catch {
+    // no snapshot either
+  }
+  return null;
+}
 
 function render(subs) {
-  const model = build(subs, park);
+  const model = build(subs, park, selection);
   const st = model.streams;
   const c = model.counts;
   const W = $("shortlist").clientWidth || 360;
   $("counts").textContent = `${c.drawings} drawings and ${c.votes} votes from ${people(c.people)}`;
 
   const gives = [...st.today].filter((s) => s.givesM2 > 0).sort((a, b) => b.givesM2 - a.givesM2);
+  const shown = model.chosen.shown.length;
   $("line-lead").textContent =
     `Along the exit's ${Math.round(model.m.length)} m the park is ${st.widthMin} to ${st.widthMax} m wide, ${m2(st.parkAreaM2)} in all. ` +
     (st.takenM2 > 0
-      ? `The ${st.proposed.length} proposed ${st.proposed.length === 1 ? "path" : "paths"} with more people for than against would take ${m2(st.takenM2)} of it: ${gives.map((s) => `${m2(s.givesM2)} of ${s.label}`).join(", ")}.`
-      : "No proposed path has more people for it than against yet.");
+      ? `The ${shown} proposals shown would take ${m2(st.takenM2)} of it: ${gives.map((s) => `${m2(s.givesM2)} of ${s.label}`).join(", ")}.`
+      : "No proposal is shown yet.");
   $("line").innerHTML = drawLine(model, park, $("line").clientWidth || 360);
   $("line-key").innerHTML = lineKey(model);
   const ob = model.objects;
   $("line-note").textContent =
-    `${ob.proposed.length} proposed things stand in the park and are drawn as bubbles` +
-    (ob.outside ? `; ${ob.outside} more stand outside the park's outline and are not.` : ".");
+    (model.chosen.standIn
+      ? "Shown: every proposal with more people for it than against. "
+      : `Shown: the final map's top proposals (exit12n.org/final)${model.chosen.via === "snapshot" && model.chosen.at ? `, as of ${new Date(model.chosen.at).toLocaleString()}` : ""}, with its counts of votes. `) +
+    (ob.outside ? `${ob.outside} of the ${ob.proposed.length} things shown stand outside the park's outline: they are on the line by their distance along the exit all the same.` : "");
 
   const lead = model.ranked.slice(0, 3).map((g) => g.name);
   const contested = model.ranked.filter((g) => g.against > 0).length;
@@ -339,6 +319,17 @@ async function refresh() {
     const subs = JSON.parse(text);
     if (!Array.isArray(subs)) throw new Error("not a list");
     lastGood = new Date();
+    const changed = text !== lastJson;
+    // the final map's selection follows the same data: ask again when the data changed, or, while it has never
+    // answered, every few minutes
+    if ((selection && changed) || (!selection && Date.now() - finalTried > FINAL_RETRY_S * 1000)) {
+      finalTried = Date.now();
+      const next = await askFinalMap();
+      const was = JSON.stringify(selection?.rows?.map((r) => [r.id, r.votesFor, r.votesAgainst]));
+      const now = JSON.stringify(next?.rows?.map((r) => [r.id, r.votesFor, r.votesAgainst]));
+      if (next || !selection) selection = next ?? selection;
+      if (was !== now) lastJson = "";
+    }
     if (text !== lastJson) {
       lastJson = text;
       lastSubs = subs;
