@@ -19,7 +19,9 @@
 html { -webkit-text-size-adjust: 100%; }
 body { background: var(--paper); color: var(--ink); font-family: var(--serif); font-size: 1.125rem; line-height: 1.55; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 main { max-width: 1228px; margin: 0 auto; padding: 1.4rem 24px 5rem; }
-header { display: flex; align-items: center; gap: 0.7rem; }
+header a { display: inline-flex; align-items: center; gap: 0.7rem; color: inherit; text-decoration: none; }
+header a:hover span, header a:focus-visible span { text-decoration: underline; text-underline-offset: 0.2em; }
+header a:focus-visible, .pager button:focus-visible { outline: 2px solid var(--sienna); outline-offset: 3px; }
 header img { width: 44px; height: 44px; }
 header span { font-variant-caps: small-caps; letter-spacing: 0.04em; color: var(--ink-soft); }
 h1 { font-size: 2.3rem; font-weight: 400; line-height: 1.1; margin-top: 1.5rem; }
@@ -38,6 +40,9 @@ svg [data-tip] { cursor: default; }
 .key { display: inline-block; width: 0.85em; height: 0.85em; border-radius: 2px; vertical-align: -0.08em; margin-right: 0.3em; }
 p .key { margin-left: 0.9em; }
 p .key:first-child { margin-left: 0; }
+.pager { display: flex; align-items: center; gap: 1.1rem; margin-top: 0.9rem; font-size: 1rem; color: var(--ink-soft); font-variant-numeric: lining-nums tabular-nums; }
+.pager button { font: inherit; color: var(--ink); background: none; border: 1px solid var(--hairline); border-radius: 3px; padding: 0.3rem 0.9rem; cursor: pointer; }
+.pager button:disabled { color: var(--ink-faint); opacity: 0.5; cursor: default; }
 #tip { position: absolute; z-index: 5; max-width: min(22rem, 90vw); background: var(--paper); border: 1px solid var(--hairline); padding: 0.4rem 0.6rem; font-size: 0.95rem; line-height: 1.35; pointer-events: none; }
 #tip strong { font-weight: 700; }
 @media (max-width: 720px) {
@@ -49,7 +54,7 @@ p .key:first-child { margin-left: 0; }
 </head>
 <body>
 <main>
-<header><img src="logo.png" alt="Spherical Harmonics" width="44" height="44"><span>Spherical Harmonics</span></header>
+<header><a href="https://sphericalharmonics.org" aria-label="Spherical Harmonics: the website"><img src="logo.png" alt="" width="44" height="44"><span>Spherical Harmonics</span></a></header>
 <h1>Exit 12N: what the map says so far</h1>
 <p class="meta"><span id="counts">Reading the map</span>. <span id="status">Fetching the live data.</span></p>
 
@@ -57,12 +62,12 @@ p .key:first-child { margin-left: 0; }
 <p class="lead" id="line-lead">&nbsp;</p>
 <div class="chart" id="line"></div>
 <p class="note" id="line-key"></p>
-<p class="note">The exit is drawn straight, with what the map's own data names along it; the rise, the crest and the descent are read from the ground's heights. A band's thickness is metres of the park's width, from the exit across to the park's far edge, so at every point the bands above the line and the bands below it add up to the same full width. A bubble is a proposed thing at its own distance along the exit, stacked away from the line so that none overlap: its colour is its type's colour on the map, its area is its footprint at the bands' scale, and it is more opaque the more votes for it it has, net of those against. Each proposal's ground is taken out of the land cover it sits on, and only the part of it that lies inside the park counts. Hover or tap anything to see what it is. <span id="line-note"></span></p>
+<p class="note">The exit is drawn straight, with what the map's own data names along it; the rise, the crest and the descent are read from the ground's heights. A band's thickness is metres of the park's width, from the exit across to the park's far edge, so at every point the bands above the line and the bands below it add up to the same full width. A bubble is a proposed thing at its own distance along the exit, stacked away from the line so that none overlap: its colour is its type's colour on the map, its area is its footprint at the bands' scale, and it is more opaque the more votes for it it has, net of those against. Only paths are bands: each proposed path's ground is taken out of the land cover it is drawn on, and only the part inside the park counts. Things are bubbles and take nothing from the bands. A proposal to remove something that is there is neither: the ground it covers turns to grass below the line, unless a shown path takes it, and a hover on that grass names the removal. Hover or tap anything to see what it is. <span id="line-note"></span></p>
 
 <h2 id="the-shortlist"><span class="n">2</span>The shortlist</h2>
 <p class="lead" id="shortlist-lead">&nbsp;</p>
 <div class="chart" id="shortlist"></div>
-<p class="note" id="shortlist-rest"></p>
+<nav class="pager" aria-label="Pages of the shortlist"><button type="button" id="page-prev">Previous</button><span id="page-at" aria-live="polite"></span><button type="button" id="page-next">Next</button></nav>
 
 <h2 id="the-themes"><span class="n">3</span>The themes</h2>
 <p class="lead" id="themes-lead">&nbsp;</p>

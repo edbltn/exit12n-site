@@ -55,6 +55,16 @@ function spanAlong(path, m, corridor) {
   return lo <= hi ? [lo, hi] : null;
 }
 
+/** What a change proposal's type says, as the app reads it (40-vote-on-proposals/20-describe-a-submission.ts,
+ *  changeOf): "remove" or "move" for a type named remove-<kind> or move-<kind> where <kind> is a thing the app
+ *  lets people pick (a road is only ever removed, that is, closed to cars); null for every other type. */
+export function changeOf(typeId, park) {
+  const found = /^(remove|move)-([a-z]+)$/.exec(typeId ?? "");
+  if (!found || !park.config.existingKinds.includes(found[2])) return null;
+  if (found[1] === "move" && found[2] === "road") return null;
+  return found[1];
+}
+
 function areaOf(sub) {
   if (sub.kind === "line") return 0;
   return sub.shape === "circle" ? Math.PI * (sub.widthM / 2) ** 2 : sub.widthM * (sub.lengthM ?? sub.widthM);
@@ -78,7 +88,7 @@ export function read(sub, park, m) {
   const road = sub.existing?.kind === "road" ? park.roads[sub.existing.id.split(":").slice(0, 2).join(":")] : null;
   const base = sub.label?.trim() || park.types[sub.typeId] || sub.typeId.replace(/-/g, " ");
   return {
-    id: sub.id, typeId: sub.typeId, kind: sub.kind, name: road ? `${base} (${road})` : base, color: sub.color,
+    id: sub.id, typeId: sub.typeId, kind: sub.kind, change: changeOf(sub.typeId, park), name: road ? `${base} (${road})` : base, color: sub.color,
     at, centre, coords: sub.coords, widthM: sub.widthM, areaM2: areaOf(sub), votesFor, votesAgainst,
     for: votesFor.size, against: votesAgainst.size, net: votesFor.size - votesAgainst.size, createdAt: sub.createdAt,
   };
@@ -155,6 +165,15 @@ export function bubbleOpacity(net, mostNet) {
   return BUBBLE_MIN_OPACITY + (1 - BUBBLE_MIN_OPACITY) * ((Math.min(net, mostNet) - 1) / (mostNet - 1));
 }
 
+/** One page of a ranked list: its rows with their ranks, and where it stands. A page past the end is the last. */
+export const PAGE_SIZE = 10;
+export function pageOf(list, page, size = PAGE_SIZE) {
+  const pages = Math.max(1, Math.ceil(list.length / size));
+  const at = Math.max(0, Math.min(pages - 1, Math.floor(page) || 0));
+  const rows = list.slice(at * size, at * size + size).map((item, i) => ({ item, rank: at * size + i + 1 }));
+  return { rows, page: at, pages, from: rows.length ? at * size + 1 : 0, to: at * size + rows.length, total: list.length };
+}
+
 export function rank(groups) {
   return [...groups].sort((a, b) => b.net - a.net || b.for - a.for || b.members.length - a.members.length || a.name.localeCompare(b.name));
 }
@@ -189,7 +208,7 @@ export function select(items, selection, m = null) {
       // the final map measures along two ways; way 1 is the off-ramp, the line drawn here
       const onLine = row.alongRamp && row.alongRamp.way === 1 && Number.isFinite(row.alongRamp.alongM);
       return {
-        id: row.id, typeId, kind, name: row.title ?? live?.name ?? typeId,
+        id: row.id, typeId, kind, change: row.change !== undefined ? row.change : live?.change ?? null, name: row.title ?? live?.name ?? typeId,
         color: live?.color ?? byType.get(typeId) ?? "#9e9e9e",
         coords, centre: kind === "line" ? coords[Math.floor(coords.length / 2)] : coords[0],
         widthM: row.widthM ?? live?.widthM ?? 0, areaM2: row.areaM2 ?? live?.areaM2 ?? 0,
@@ -207,43 +226,39 @@ export function select(items, selection, m = null) {
 /** What the park's own surface classes are called on the page: the app's names, but for two of Eric's words. */
 const COVER_NAMES = { none: "other", "leaf-litter": "woods" };
 
-/** The park's width at every section along the ramp, by what covers it: today, and once the shown proposals
- *  are laid over it. Every proposal is clipped to the park first: a path takes only the park cells it is drawn
- *  on, a thing only the share of its footprint that lies on park cells, and what is drawn outside takes nothing.
- *  Each takes only what is still free, in the order shown, so no ground is counted twice and both stacks add up
- *  to the park's full width at every section. */
+/** The park's width at every section along the ramp, by what covers it: today, and with the shown proposals.
+ *
+ *  Only paths are bands: a proposal the app draws as a line (kind "line"; the final map's row.kind "line").
+ *  Everything the app places as a point (kind "point"), a bench or a rain garden alike, is a bubble and touches
+ *  no band. Each path is clipped to the park first: it takes only the park cells it is drawn on, and what is
+ *  drawn outside takes nothing. Each takes only what is still free, in the order shown.
+ *
+ *  A removal (a proposal to take away something that is there: remove-road, remove-tree, ...) is neither a band
+ *  nor a bubble. The ground it covers, clipped to the park, turns to grass in the proposed stack, unless a shown
+ *  path occupies that ground, in which case the path keeps it. A move is not a removal: it is drawn at its new
+ *  spot like any other proposal.
+ *
+ *  No ground is counted twice, so both stacks add up to the park's full width at every section. */
 export function streams(shown, park, m) {
   const K = park.rows[0].length;
   const nc = park.classes.length;
   const cellM2 = park.cellM * park.binM;
+  const grass = park.classes.findIndex((c) => c.id === "grass");
   const today = Array.from({ length: nc }, () => new Array(m.bins).fill(0));
   park.rows.forEach((row, b) => {
     for (const ch of row) if (ch !== ".") today[Number(ch)][b] += park.cellM;
   });
   const after = today.map((w) => [...w]);
-  const from = Array.from({ length: nc }, () => 0); // m² each class gives up
-  const used = new Map(); // cell -> the share of it already taken
+  const from = Array.from({ length: nc }, () => 0); // m² each class gives up to paths
+  const toGrass = Array.from({ length: nc }, () => 0); // m² of each class a removal turns to grass
+  const used = new Map(); // cell -> the share of it already spoken for
   const bands = [];
-  const taken = new Map(); // drawing id -> m² it took
+  const taken = new Map(); // drawing id -> m² it took or turned
 
-  const take = (band, id, b, c, share) => {
-    const cell = b * K + c;
-    const free = 1 - (used.get(cell) ?? 0);
-    const got = Math.min(free, share);
-    if (got <= 0) return 0;
-    used.set(cell, (used.get(cell) ?? 0) + got);
-    const cls = Number(park.rows[b][c]);
-    after[cls][b] -= got * park.cellM;
-    band.width[b] += got * park.cellM;
-    from[cls] += got * cellM2;
-    taken.set(id, (taken.get(id) ?? 0) + got * cellM2);
-    return got;
-  };
-
-  for (const it of shown) {
-    // one band per drawing, so a hover shows that drawing's own votes, as the final map counts them
-    const band = { key: it.id, kind: "proposed", shape: it.kind, label: it.name, color: it.color, for: it.for, against: it.against, width: new Array(m.bins).fill(0) };
-    bands.push(band);
+  /** The park cells a drawing covers, clipped to the park: a path's own cells, or the cells under a thing's
+   *  footprint (a disc of its area), nearest first, each with the share of it the drawing covers. */
+  const cellsOf = (it) => {
+    const out = [];
     if (it.kind === "line") {
       const cells = new Set();
       for (let i = 0; i < it.coords.length - 1; i++) {
@@ -259,46 +274,85 @@ export function streams(shown, park, m) {
           for (let c = Math.max(0, lo); c <= Math.min(K - 1, hi); c++) if (park.rows[b][c] !== ".") cells.add(b * K + c);
         }
       }
-      for (const cell of cells) take(band, it.id, Math.floor(cell / K), cell % K, 1);
-    } else if (it.centre) {
-      const a = m.along(it.centre[0], it.centre[1]);
-      const R = Math.sqrt(it.areaM2 / Math.PI);
-      // clip to the park: only the share of its footprint (a disc of its area) that lies on park cells takes ground
-      let inside = 0;
-      let all = 0;
-      for (let ds = -Math.ceil(R); ds <= Math.ceil(R); ds++) {
-        for (let dd = -Math.ceil(R); dd <= Math.ceil(R); dd++) {
-          if (ds * ds + dd * dd > R * R && (ds || dd)) continue;
-          all++;
-          if (m.cell(a.s + ds, a.d + dd) >= 0) inside++;
-        }
-      }
-      if (!inside) continue; // all of it is outside the park: nothing of the park to take
-      const b0 = Math.max(0, Math.min(m.bins - 1, Math.floor(a.s / park.binM)));
-      const c0 = Math.round((a.d - park.dMin) / park.cellM);
-      const near = []; // the park cells under and around it, nearest first
-      const reachB = Math.ceil(R / park.binM) + 2;
-      const reachC = Math.ceil(R / park.cellM) + 3;
-      for (let b = Math.max(0, b0 - reachB); b <= Math.min(m.bins - 1, b0 + reachB); b++) {
-        for (let c = Math.max(0, c0 - reachC); c <= Math.min(K - 1, c0 + reachC); c++) {
-          if (park.rows[b][c] === ".") continue;
-          near.push([b === b0 && c === c0 ? 0 : Math.hypot((b + 0.5) * park.binM - a.s, park.dMin + c * park.cellM - a.d), b, c]);
-        }
-      }
-      near.sort((p, q) => p[0] - q[0]);
-      let left = (it.areaM2 * inside) / all / cellM2; // the clipped footprint, in cells
-      for (const [, b, c] of near) {
-        if (left <= 1e-9) break;
-        left -= take(band, it.id, b, c, Math.min(1, left));
+      for (const cell of cells) out.push([Math.floor(cell / K), cell % K, 1]);
+      return out;
+    }
+    if (!it.centre) return out;
+    const a = m.along(it.centre[0], it.centre[1]);
+    const R = Math.sqrt(it.areaM2 / Math.PI);
+    let inside = 0;
+    let all = 0;
+    for (let ds = -Math.ceil(R); ds <= Math.ceil(R); ds++) {
+      for (let dd = -Math.ceil(R); dd <= Math.ceil(R); dd++) {
+        if (ds * ds + dd * dd > R * R && (ds || dd)) continue;
+        all++;
+        if (m.cell(a.s + ds, a.d + dd) >= 0) inside++;
       }
     }
+    if (!inside) return out; // all of it is outside the park
+    const b0 = Math.max(0, Math.min(m.bins - 1, Math.floor(a.s / park.binM)));
+    const c0 = Math.round((a.d - park.dMin) / park.cellM);
+    const near = [];
+    for (let b = Math.max(0, b0 - Math.ceil(R / park.binM) - 2); b <= Math.min(m.bins - 1, b0 + Math.ceil(R / park.binM) + 2); b++) {
+      for (let c = Math.max(0, c0 - Math.ceil(R / park.cellM) - 3); c <= Math.min(K - 1, c0 + Math.ceil(R / park.cellM) + 3); c++) {
+        if (park.rows[b][c] !== ".") near.push([b === b0 && c === c0 ? 0 : Math.hypot((b + 0.5) * park.binM - a.s, park.dMin + c * park.cellM - a.d), b, c]);
+      }
+    }
+    near.sort((p, q) => p[0] - q[0]);
+    let left = (it.areaM2 * inside) / all / cellM2; // the clipped footprint, in cells
+    for (const [, b, c] of near) {
+      if (left <= 1e-9) break;
+      out.push([b, c, Math.min(1, left)]);
+      left -= Math.min(1, left);
+    }
+    return out;
+  };
+  const free = (b, c, share) => Math.min(1 - (used.get(b * K + c) ?? 0), share);
+
+  // paths first, in the order shown: each takes the free ground it is drawn on
+  for (const it of shown) {
+    if (it.kind !== "line" || it.change === "remove") continue; // a thing is a bubble only; a removal is handled below
+    // one band per path, so a hover shows that path's own votes, as the final map counts them
+    const band = { key: it.id, kind: "proposed", shape: it.kind, label: it.name, color: it.color, for: it.for, against: it.against, width: new Array(m.bins).fill(0) };
+    bands.push(band);
+    for (const [b, c, share] of cellsOf(it)) {
+      const got = free(b, c, share);
+      if (got <= 0) continue;
+      used.set(b * K + c, (used.get(b * K + c) ?? 0) + got);
+      const cls = Number(park.rows[b][c]);
+      after[cls][b] -= got * park.cellM;
+      band.width[b] += got * park.cellM;
+      from[cls] += got * cellM2;
+      taken.set(it.id, (taken.get(it.id) ?? 0) + got * cellM2);
+    }
+  }
+  // then removals: the ground each covers that no shown path has taken turns to grass
+  const removals = [];
+  for (const it of shown) {
+    if (it.change !== "remove") continue;
+    const r = { id: it.id, label: it.name, for: it.for, against: it.against, areaM2: 0, turnedM2: 0, bins: new Set() };
+    for (const [b, c, share] of cellsOf(it)) {
+      const got = free(b, c, share);
+      if (got <= 0) continue;
+      used.set(b * K + c, (used.get(b * K + c) ?? 0) + got);
+      const cls = Number(park.rows[b][c]);
+      r.areaM2 += got * cellM2;
+      r.bins.add(b);
+      if (cls === grass) continue; // grass it was, grass it stays
+      after[cls][b] -= got * park.cellM;
+      after[grass][b] += got * park.cellM;
+      toGrass[cls] += got * cellM2;
+      r.turnedM2 += got * cellM2;
+    }
+    taken.set(it.id, r.areaM2);
+    if (r.areaM2 > 0) removals.push(r);
   }
 
   const area = (w) => w.reduce((a, v) => a + v, 0) * park.binM;
   const order = park.classes.map((c, i) => i).sort((a, b) => (park.classes[a].id === "none") - (park.classes[b].id === "none") || a - b);
-  const cover = (widths) => order.filter((i) => area(today[i]) > 0).map((i) => ({
+  const cover = (widths) => order.filter((i) => area(today[i]) > 0 || area(widths[i]) > 0).map((i) => ({
     key: park.classes[i].id, kind: "cover", label: COVER_NAMES[park.classes[i].id] ?? park.classes[i].id.replace(/-/g, " "), color: park.classes[i].color,
-    width: smooth(widths[i]), areaM2: area(widths[i]), givesM2: from[i],
+    width: smooth(widths[i]), areaM2: area(widths[i]), givesM2: from[i], turnedToGrassM2: toGrass[i],
   }));
   const proposed = bands.map((x) => ({ ...x, width: smooth(x.width), areaM2: area(x.width) })).filter((x) => x.areaM2 > 0);
   const total = today.reduce((a, w) => a + area(w), 0);
@@ -306,9 +360,10 @@ export function streams(shown, park, m) {
   return {
     today: cover(today),
     after: [...proposed, ...cover(after)],
-    proposed, taken,
+    proposed, taken, removals,
     parkAreaM2: total,
     takenM2: proposed.reduce((a, x) => a + x.areaM2, 0),
+    turnedToGrassM2: toGrass.reduce((a, v) => a + v, 0),
     widthMin: Math.min(...widths), widthMax: Math.max(...widths),
   };
 }
@@ -318,7 +373,7 @@ export function streams(shown, park, m) {
 export function objects(shown, park, m) {
   const proposed = [];
   for (const it of shown) {
-    if (it.kind !== "point" || !it.centre) continue;
+    if (it.kind !== "point" || !it.centre || it.change === "remove") continue; // a removal is no bubble
     const a = m.along(it.centre[0], it.centre[1]);
     // the final map's own distance along the off-ramp when it gives one; a row measured along the on-ramp (way 0)
     // is placed by the nearest point of the line drawn here instead

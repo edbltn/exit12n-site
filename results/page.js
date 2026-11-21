@@ -1,6 +1,6 @@
 // Draw the three charts from the live submissions and keep them fresh.
 // Every name, colour and number drawn comes from the live data or from park.json (the app's own files).
-import { build, bubbleOpacity, voteText, where } from "./model.js";
+import { build, bubbleOpacity, pageOf, voteText, where } from "./model.js";
 import { layoutLine } from "./layout.js";
 
 const REFRESH_S = 15;
@@ -57,6 +57,31 @@ function drawLine(model, park, width) {
       (s.kind === "cover" ? `<path d="${d}" fill="url(#tx-${s.key})" pointer-events="none"/>` : ""));
   }
 
+  // a removal is no band and no bubble: the ground it covered is grass now. Over that stretch of the grass band a
+  // hover or tap names the removal and its votes.
+  const grass = L.after.drawn.find((d) => d.band.key === "grass");
+  if (grass && model.streams.removals.length) {
+    const named = (b) => model.streams.removals.filter((r) => r.bins.has(b)).map((r) => [r.label, votes(r.for, r.against)].filter(Boolean).join(": "));
+    const bins = grass.near.length;
+    for (let a = 0; a < bins; ) {
+      const names = named(a).join("; ");
+      let b = a;
+      while (b + 1 < bins && named(b + 1).join("; ") === names) b++;
+      if (names) {
+        // the stretch runs from half way to the section before to half way to the one after
+        const xs = [];
+        for (let k = a; k <= b; k++) xs.push(k);
+        const edge = (ys) => xs.map((k) => `${xb(k).toFixed(1)},${ys[k].toFixed(1)}`);
+        const left = xb(a) - (a > 0 ? (xb(a) - xb(a - 1)) / 2 : 0);
+        const right = xb(b) + (b + 1 < bins ? (xb(b + 1) - xb(b)) / 2 : 0);
+        const d = `M${left.toFixed(1)},${grass.near[a].toFixed(1)}L${edge(grass.near).join("L")}L${right.toFixed(1)},${grass.near[b].toFixed(1)}L${right.toFixed(1)},${grass.far[b].toFixed(1)}L${edge(grass.far).reverse().join("L")}L${left.toFixed(1)},${grass.far[a].toFixed(1)}Z`;
+        // a wide unseen edge as well, so a strip of grass a pixel or two thick can still be hovered or tapped
+        parts.push(`<path class="removal" d="${d}" fill="transparent" stroke="transparent" stroke-width="12" pointer-events="all" data-tip="${esc(`${cap(grass.band.label)}; ${names}`)}"/>`);
+      }
+      a = b + 1;
+    }
+  }
+
   // every bubble near its own distance along the exit, resting on the bands, none overlapping (layout.js)
   const bubble = (c, opacity, tip, kind) =>
     `<circle class="bubble" data-kind="${kind}" cx="${c.cx.toFixed(2)}" cy="${c.cy.toFixed(2)}" r="${c.r.toFixed(2)}" fill="${c.o.color}" fill-opacity="${opacity.toFixed(2)}" stroke="${c.o.color}" stroke-width="1.2" data-net="${c.o.net ?? ""}" data-home="${c.home.toFixed(2)}"/>` +
@@ -109,14 +134,12 @@ function lineKey(model) {
 
 // ---------- 2. the shortlist ----------
 
-function drawShortlist(model, park, W) {
+function drawShortlist(model, park, W, page) {
   const narrow = W < 720;
-  const top = model.ranked.slice(0, 10);
-  const contested = model.ranked.filter((g) => g.against > 0 && !top.includes(g)).sort((a, b) => b.against - a.against || b.for - a.for).slice(0, 8);
-  const all = [...top, ...contested];
   const AXIS = narrow ? Math.round(W * 0.3) : Math.min(700, Math.round(W * 0.6));
-  const mostFor = Math.max(2, ...all.map((g) => g.for));
-  const mostAgainst = Math.max(1, ...all.map((g) => g.against));
+  // one scale for every page, so a bar means the same on page 1 and on page 7
+  const mostFor = Math.max(2, ...model.ranked.map((g) => g.for));
+  const mostAgainst = Math.max(1, ...model.ranked.map((g) => g.against));
   const UNIT = Math.min(64, (W - AXIS - 34) / mostFor, (narrow ? AXIS - 30 : 130) / mostAgainst);
   const ROW = narrow ? 70 : 34;
   const BAR = narrow ? 46 : 5;
@@ -125,15 +148,15 @@ function drawShortlist(model, park, W) {
     `<text x="${AXIS + 8}" y="14" font-size="14" fill="${SOFT}" class="caps">for</text>`,
   ];
   let y = 26;
-  const row = (g, n) => {
+  for (const { item: g, rank: n } of page.rows) {
     const backed = g.net >= park.config.winSupport;
     const times = g.members.length > 1 ? `<tspan fill="${FAINT}" font-size="13"> ×${g.members.length}</tspan>` : "";
     const tip = tipOf(g.name, where(g, park), votes(g.for, g.against));
     parts.push(`<text x="18" y="${y + 18}" text-anchor="end" font-size="14" fill="${FAINT}">${n}</text>`);
     if (narrow) {
-      parts.push(`<text x="28" y="${y + 18}" font-size="16" fill="${INK}">${esc(g.name)}${times}</text>`);
       const place = where(g, park);
       const fits = Math.floor((W - 30) / 6.3);
+      parts.push(`<text x="28" y="${y + 18}" font-size="16" fill="${INK}">${esc(g.name)}${times}</text>`);
       parts.push(`<text x="28" y="${y + 37}" font-size="13" fill="${FAINT}">${esc(place.length > fits ? `${place.slice(0, fits - 1)}…` : place)}</text>`);
     } else {
       parts.push(`<text x="30" y="${y + 18}" font-size="17" fill="${INK}">${esc(g.name)}${times}<tspan fill="${FAINT}" font-size="13.5" dx="10">${esc(where(g, park))}</tspan></text>`);
@@ -143,18 +166,10 @@ function drawShortlist(model, park, W) {
     parts.push(`<text x="${(AXIS + g.for * UNIT + 8).toFixed(1)}" y="${y + BAR + 13}" font-size="14" fill="${INK}">${g.for}</text>`);
     if (g.against) parts.push(`<text x="${(AXIS - g.against * UNIT - 8).toFixed(1)}" y="${y + BAR + 13}" text-anchor="end" font-size="14" fill="${INK}">${g.against}</text>`);
     y += ROW;
-  };
-  top.forEach((g, i) => row(g, i + 1));
-  const listTop = narrow ? 68 : 22;
-  if (contested.length) {
-    y += 8;
-    parts.push(`<text x="28" y="${y + 16}" font-size="15" fill="${SOFT}" class="caps">Further down, with someone against</text>`);
-    y += 28;
-    contested.forEach((g) => row(g, model.ranked.indexOf(g) + 1));
   }
   const H = y + 6;
-  if (!narrow) parts.push(`<line x1="${AXIS}" y1="${listTop}" x2="${AXIS}" y2="${H - 4}" stroke="${INK}" stroke-opacity="0.5" stroke-width="1"/>`);
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="The ten proposals with the most people behind them, and those with someone against, with the people for and against each">${parts.join("")}</svg>`;
+  if (!narrow) parts.push(`<line x1="${AXIS}" y1="22" x2="${AXIS}" y2="${H - 4}" stroke="${INK}" stroke-opacity="0.5" stroke-width="1"/>`);
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Proposals ${page.from} to ${page.to} of ${page.total} by the people behind them, with the people for and against each">${parts.join("")}</svg>`;
 }
 
 // ---------- 3. the themes ----------
@@ -202,6 +217,7 @@ let source = 0;
 let finalMap = null; // the final map's module, once it has loaded
 let selection = null; // its answer: { rows, via, at }, or null while the stand-in shows
 let finalTried = 0;
+let shortPage = 0; // the page of the shortlist the reader is on; kept through every refresh
 
 /** Ask the final map which proposals it shows: its own function first, its snapshot second, else nothing. */
 async function askFinalMap() {
@@ -233,15 +249,16 @@ function render(subs) {
   $("counts").textContent = `${c.drawings} drawings and ${c.votes} votes from ${people(c.people)}`;
 
   const gives = [...st.today].filter((s) => s.givesM2 > 0).sort((a, b) => b.givesM2 - a.givesM2);
-  const shown = model.chosen.shown.length;
+  const paths = st.proposed.length;
+  const ob = model.objects;
   $("line-lead").textContent =
     `Along the exit's ${Math.round(model.m.length)} m the park is ${st.widthMin} to ${st.widthMax} m wide, ${m2(st.parkAreaM2)} in all. ` +
     (st.takenM2 > 0
-      ? `The ${shown} proposals shown would take ${m2(st.takenM2)} of it: ${gives.map((s) => `${m2(s.givesM2)} of ${s.label}`).join(", ")}.`
-      : "No proposal is shown yet.");
+      ? `The ${paths} proposed ${paths === 1 ? "path" : "paths"} shown would take ${m2(st.takenM2)} of it: ${gives.map((s) => `${m2(s.givesM2)} of ${s.label}`).join(", ")}. The ${ob.proposed.length} proposed things are bubbles and take none.`
+      : `No proposed path is shown yet. The ${ob.proposed.length} proposed things are bubbles and take no ground.`) +
+    (st.removals.length ? ` The ${st.removals.length} ${st.removals.length === 1 ? "removal" : "removals"} shown would turn ${m2(st.turnedToGrassM2)} to grass.` : "");
   $("line").innerHTML = drawLine(model, park, $("line").clientWidth || 360);
   $("line-key").innerHTML = lineKey(model);
-  const ob = model.objects;
   $("line-note").textContent =
     (model.chosen.standIn
       ? "Shown: every proposal with more people for it than against. "
@@ -251,9 +268,12 @@ function render(subs) {
   const lead = model.ranked.slice(0, 3).map((g) => g.name);
   const contested = model.ranked.filter((g) => g.against > 0).length;
   $("shortlist-lead").textContent = `Out front: ${lead.join(", ")}. ${contested} of the ${c.proposals} proposals have someone against them.`;
-  $("shortlist").innerHTML = drawShortlist(model, park, W);
-  const tail = model.ranked[10];
-  $("shortlist-rest").textContent = tail ? `The other ${c.proposals - 10} proposals each have ${people(tail.for)} or fewer for them.` : "";
+  const page = pageOf(model.ranked, shortPage);
+  shortPage = page.page; // a list that got shorter leaves the reader on its last page
+  $("shortlist").innerHTML = drawShortlist(model, park, W, page);
+  $("page-at").textContent = `${page.from} to ${page.to} of ${page.total}`;
+  $("page-prev").disabled = page.page === 0;
+  $("page-next").disabled = page.page >= page.pages - 1;
 
   const first = model.themes[0];
   const most = [...model.themes].sort((a, b) => b.items.length - a.items.length)[0];
@@ -329,9 +349,20 @@ function labels() {
   document.addEventListener("click", show);
 }
 
+/** Previous and Next under the shortlist: real buttons, so a tap, a click and the keyboard all work. */
+function pager() {
+  const turn = (by) => () => {
+    shortPage += by;
+    if (lastSubs) render(lastSubs);
+  };
+  $("page-prev").addEventListener("click", turn(-1));
+  $("page-next").addEventListener("click", turn(1));
+}
+
 async function start() {
   park = await (await fetch("park.json")).json();
   labels();
+  pager();
   await refresh();
   setInterval(refresh, REFRESH_S * 1000);
   let width = window.innerWidth;
