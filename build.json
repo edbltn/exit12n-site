@@ -1,0 +1,17 @@
+{
+ "build": "20261119T023403Z-7e1d5d1",
+ "entry": "assets/index-CRhw2dul.js",
+ "css": [
+  "assets/index-DuX_1MQJ.css"
+ ],
+ "integrity": {
+  "assets/06-answer-in-the-worker-C-A6CRGZ.js": "sha384-J7LNRiGnjnfyl3NAV7O9zkQ89wc2nmm+jCCVrqZrQz1X9c6Zumkhs15ne3dV0ygt",
+  "assets/20-route-in-a-worker-CmZduLVZ.js": "sha384-SLTXsisqjj4TY8/+Q0iEg1QhLpVSB4eoyrbRcWJ6tKL3X2OgDFwC5B65dCsneRMV",
+  "assets/index-CRhw2dul.js": "sha384-/Y0MwaW3qqttKlXe+YlwVsAayfgv/MK8pwkK/KoKd/+63EI+t/2LCEmsiS/mFEWa",
+  "assets/index-DuX_1MQJ.css": "sha384-TCyh54hEkvlWyFe1xRW335oX2GiFa2kNUAUdUR8ghlGPVEd3T9VsAQ0sDeC9WnrT"
+ },
+ "content": "d4b6a752858d9811b25959874189d81766413f28ea1bbd3e3cb9cee72f39e4ec",
+ "env": "production",
+ "commit": "7e1d5d15c6aa60415c401a0f3183eea3928efd1f",
+ "area": ""
+}
