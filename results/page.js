@@ -1,6 +1,7 @@
 // Draw the three charts from the live submissions and keep them fresh.
 // Every name, colour and number drawn comes from the live data or from park.json (the app's own files).
 import { build, bubbleOpacity, voteText, where } from "./model.js";
+import { layoutLine } from "./layout.js";
 
 const REFRESH_S = 15;
 const API = "https://exit12n-api-katze52zaq-uc.a.run.app/api/submissions";
@@ -44,62 +45,25 @@ const tipOf = (...lines) => lines.filter(Boolean).join("|");
 const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 
 function drawLine(model, park, width) {
-  const st = model.streams;
   const ob = model.objects;
-  const m = model.m;
-  const W = Math.max(300, width);
-  const narrow = W < 720;
-  const X0 = narrow ? 8 : 74;
-  const X1 = W - (narrow ? 8 : 14);
-  const x = (s) => X0 + (s / m.length) * (X1 - X0);
-  const xb = (b) => x(Math.min(m.length, (b + 0.5) * park.binM));
-  const binOf = (s) => Math.max(0, Math.min(m.bins - 1, Math.floor(s / park.binM)));
-  const PXM = (narrow ? 120 : 170) / st.widthMax; // pixels per metre across, the same for bands and bubbles
-  const R = (a) => Math.max(3, PXM * Math.sqrt(a / Math.PI));
-  const GAP = 8;
+  const L = layoutLine(model, park, width);
+  const { W, narrow, X0, X1, GAP, x, xb } = L;
   const parts = []; // drawn with the line at y = 0: today above (negative), proposed below
 
-  const band = (s, base, dir) => {
-    const near = base.map((y, b) => `${xb(b).toFixed(1)},${y.toFixed(1)}`);
-    const far = base.map((y, b) => `${xb(b).toFixed(1)},${(y + dir * s.width[b] * PXM).toFixed(1)}`).reverse();
-    const d = `M${near.join("L")}L${far.join("L")}Z`;
+  for (const { band: s, near, far } of [...L.today.drawn, ...L.after.drawn]) {
+    const d = `M${near.map((y, b) => `${xb(b).toFixed(1)},${y.toFixed(1)}`).join("L")}L${far.map((y, b) => `${xb(b).toFixed(1)},${y.toFixed(1)}`).reverse().join("L")}Z`;
     const tip = s.kind === "cover" ? cap(s.label) : tipOf(s.label, votes(s.for, s.against));
-    return `<path d="${d}" fill="${s.color ?? UNCLASSED}" stroke="${PAPER}" stroke-width="0.8" data-tip="${esc(tip)}"/>` +
-      (s.kind === "cover" ? `<path d="${d}" fill="url(#tx-${s.key})" pointer-events="none"/>` : "");
-  };
-  /** Stack bands outward from the line; returns the outer edge at every section. */
-  const stack = (bands, dir) => {
-    let base = Array.from({ length: m.bins }, () => dir * GAP);
-    for (const s of bands) {
-      parts.push(band(s, base, dir));
-      base = base.map((y, b) => y + dir * s.width[b] * PXM);
-    }
-    return base;
-  };
-  const todayEdge = stack(st.today, -1);
-  const afterEdge = stack(st.after, 1);
+    parts.push(`<path d="${d}" fill="${s.color ?? UNCLASSED}" stroke="${PAPER}" stroke-width="0.8" data-tip="${esc(tip)}"/>` +
+      (s.kind === "cover" ? `<path d="${d}" fill="url(#tx-${s.key})" pointer-events="none"/>` : ""));
+  }
 
-  // each thing at its own distance along the exit, resting on the outer edge of the bands there. Larger ones are
-  // set first; one that would hide another is moved outward just far enough to leave it showing.
-  const rest = (list, edge, dir) => {
-    const placed = [];
-    for (const o of [...list].sort((p, q) => q.areaM2 - p.areaM2)) {
-      const r = R(o.areaM2);
-      const cx = Math.max(r + 1, Math.min(W - r - 1, x(o.s))); // whole on the page, even at either end
-      let cy = edge[binOf(o.s)] + dir * (r + 3);
-      while (placed.some((q) => Math.hypot(q.cx - cx, q.cy - cy) < 0.6 * (q.r + r))) cy += dir * 2;
-      placed.push({ o, cx, cy, r });
-    }
-    return placed;
-  };
-  const there = rest(ob.there, todayEdge, -1);
-  const proposed = rest(ob.proposed, afterEdge, 1);
-  const bubble = (c, opacity, tip) =>
-    `<circle cx="${c.cx.toFixed(1)}" cy="${c.cy.toFixed(1)}" r="${c.r.toFixed(1)}" fill="${c.o.color}" fill-opacity="${opacity.toFixed(2)}" stroke="${c.o.color}" stroke-width="1.2" data-net="${c.o.net ?? ""}"/>` +
+  // every bubble near its own distance along the exit, resting on the bands, none overlapping (layout.js)
+  const bubble = (c, opacity, tip, kind) =>
+    `<circle class="bubble" data-kind="${kind}" cx="${c.cx.toFixed(2)}" cy="${c.cy.toFixed(2)}" r="${c.r.toFixed(2)}" fill="${c.o.color}" fill-opacity="${opacity.toFixed(2)}" stroke="${c.o.color}" stroke-width="1.2" data-net="${c.o.net ?? ""}" data-home="${c.home.toFixed(2)}"/>` +
     `<circle cx="${c.cx.toFixed(1)}" cy="${c.cy.toFixed(1)}" r="${Math.max(c.r, 9).toFixed(1)}" fill="transparent" data-tip="${esc(tip)}"/>`;
-  for (const c of there) parts.push(bubble(c, 0.85, cap(c.o.name)));
+  for (const c of L.there) parts.push(bubble(c, 0.85, cap(c.o.name), "there"));
   // a proposed thing is more opaque the more net votes it has; one outside the park looks like any other
-  for (const c of proposed) parts.push(bubble(c, bubbleOpacity(c.o.net, ob.mostNet), tipOf(c.o.name, votes(c.o.for, c.o.against), c.o.inPark ? "" : "outside the park's outline")));
+  for (const c of L.proposed) parts.push(bubble(c, bubbleOpacity(c.o.net, ob.mostNet), tipOf(c.o.name, votes(c.o.for, c.o.against), c.o.inPark ? "" : "outside the park's outline"), "proposed"));
 
   // stop names, on as many rows as they need
   const rows = [];
@@ -113,8 +77,8 @@ function drawLine(model, park, width) {
   });
   const STOP_ROW = 17;
   const top = rows.length * STOP_ROW + 10;
-  const highest = Math.min(...todayEdge, ...there.map((c) => c.cy - c.r));
-  const lowest = Math.max(...afterEdge, ...proposed.map((c) => c.cy + c.r));
+  const highest = Math.min(...L.today.edge, ...L.there.map((c) => c.cy - c.r));
+  const lowest = Math.max(...L.after.edge, ...L.proposed.map((c) => c.cy + c.r));
   const Y0 = Math.ceil(top - highest + 6);
   const H = Math.ceil(Y0 + lowest + 12);
 
@@ -126,7 +90,7 @@ function drawLine(model, park, width) {
   }).join("");
   const side = (y, t) => `<text x="${narrow ? X0 + 4 : 0}" y="${y}" font-size="14" fill="${INK}" class="caps" stroke="${PAPER}" stroke-width="3" paint-order="stroke">${t}</text>`;
 
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="The exit as a line with its stops. Above it, the park's width today by land cover; below it, the same width with the shown proposals laid over it; each proposed thing is a bubble at its distance along the exit.">
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="The exit as a line with its stops. Above it, the park's width today by land cover; below it, the same width with the shown proposals laid over it; each proposed thing is a bubble near its distance along the exit.">
     <defs>${patterns()}</defs><g transform="translate(0 ${Y0})">${parts.join("")}</g>
     <line x1="${X0}" y1="${Y0}" x2="${X1}" y2="${Y0}" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>
     ${stopMarks}${side(Y0 - GAP - 8, "Today")}${side(Y0 + GAP + 16, "Proposed")}</svg>`;
