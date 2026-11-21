@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exit 12N results</title>
+<meta name="description" content="What the Exit 12N map says so far: the proposals and votes, live.">
+<link rel="icon" href="logo.png">
+<style>
+@font-face { font-family: "LM Roman 12"; src: url("fonts/lmroman12-regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "LM Roman 12"; src: url("fonts/lmroman12-italic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "LM Roman 12"; src: url("fonts/lmroman12-bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+:root {
+  --paper: #faf3e5; --ink: #1b1813; --ink-soft: #4f4a40; --ink-faint: #7a7366; --sienna: #a86b3c;
+  --hairline: rgba(27, 24, 19, 0.22);
+  --serif: "LM Roman 12", "CMU Serif", "Latin Modern Roman", Georgia, "Times New Roman", serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body { background: var(--paper); color: var(--ink); font-family: var(--serif); font-size: 1.125rem; line-height: 1.55; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+main { max-width: 1228px; margin: 0 auto; padding: 1.4rem 24px 5rem; }
+header { display: flex; align-items: center; gap: 0.7rem; }
+header img { width: 44px; height: 44px; }
+header span { font-variant-caps: small-caps; letter-spacing: 0.04em; color: var(--ink-soft); }
+h1 { font-size: 2.3rem; font-weight: 400; line-height: 1.1; margin-top: 1.5rem; }
+h2 { font-size: 1.5rem; font-weight: 400; margin-top: 3.6rem; }
+h2 .n { color: var(--ink-faint); margin-right: 0.45em; }
+p { max-width: 72ch; }
+.meta { color: var(--ink-soft); margin-top: 0.5rem; }
+.stale { color: var(--sienna); }
+.lead { margin: 0.45rem 0 1.3rem; }
+.note { color: var(--ink-soft); font-size: 0.95rem; margin-top: 1rem; }
+.chart { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+svg { display: block; font-family: var(--serif); font-variant-numeric: lining-nums tabular-nums; }
+.caps { font-variant-caps: small-caps; letter-spacing: 0.05em; }
+svg [data-tip] { cursor: default; }
+.item { white-space: nowrap; margin-right: 0.9em; }
+.key { display: inline-block; width: 0.85em; height: 0.85em; border-radius: 2px; vertical-align: -0.08em; margin-right: 0.3em; }
+p .key { margin-left: 0.9em; }
+p .key:first-child { margin-left: 0; }
+#tip { position: absolute; z-index: 5; max-width: min(22rem, 90vw); background: var(--paper); border: 1px solid var(--hairline); padding: 0.4rem 0.6rem; font-size: 0.95rem; line-height: 1.35; pointer-events: none; }
+#tip strong { font-weight: 700; }
+@media (max-width: 720px) {
+  main { padding: 1rem 16px 4rem; }
+  h1 { font-size: 1.8rem; }
+  h2 { margin-top: 2.8rem; }
+}
+</style>
+</head>
+<body>
+<main>
+<header><img src="logo.png" alt="Spherical Harmonics" width="44" height="44"><span>Spherical Harmonics</span></header>
+<h1>Exit 12N: what the map says so far</h1>
+<p class="meta"><span id="counts">Reading the map</span>. <span id="status">Fetching the live data.</span></p>
+
+<h2 id="the-line"><span class="n">1</span>The line</h2>
+<p class="lead" id="line-lead">&nbsp;</p>
+<div class="chart" id="line"></div>
+<p class="note" id="line-key"></p>
+<p class="note">The exit is drawn straight, with what the map's own data names along it. A band's thickness is metres of the park's width, from the exit across to the park's far edge, so at every point the bands above the line and the bands below it add up to the same full width. A bubble is a proposed thing, gathered by sixth of the exit's length and not placed exactly: its colour is its type's colour on the map, its area is its footprint at the bands' scale, and it is bolder the more people are for it. Hover or tap anything to see what it is. <span id="line-note"></span></p>
+
+<h2 id="the-shortlist"><span class="n">2</span>The shortlist</h2>
+<p class="lead" id="shortlist-lead">&nbsp;</p>
+<div class="chart" id="shortlist"></div>
+<p class="note" id="shortlist-rest"></p>
+
+<h2 id="the-themes"><span class="n">3</span>The themes</h2>
+<p class="lead" id="themes-lead">&nbsp;</p>
+<div class="chart" id="themes"></div>
+<p class="note">
+<span class="key" style="background:#a86b3c"></span>two or more people for it
+<span class="key" style="background:#a86b3c;opacity:.45"></span>one person for it
+<span class="key" style="border:1.2px solid #7a7366"></span>no one for it yet, or as many against
+</p>
+<p class="note">One square is one drawing on the map, in the map's own families of ideas, ordered by how many people back something in each. <span id="rules"></span></p>
+</main>
+<div id="tip" hidden></div>
+<script type="module" src="page.js"></script>
+</body>
+</html>
