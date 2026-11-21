@@ -1,5 +1,5 @@
 {
- "build": "20261119T023403Z-7e1d5d1",
+ "build": "20261121T015521Z-2c9840f",
  "entry": "assets/index-CRhw2dul.js",
  "css": [
   "assets/index-DuX_1MQJ.css"
@@ -12,6 +12,6 @@
  },
  "content": "d4b6a752858d9811b25959874189d81766413f28ea1bbd3e3cb9cee72f39e4ec",
  "env": "production",
- "commit": "7e1d5d15c6aa60415c401a0f3183eea3928efd1f",
+ "commit": "2c9840f9da0e85db313ad71bd144004f2a140ef6",
  "area": ""
 }
