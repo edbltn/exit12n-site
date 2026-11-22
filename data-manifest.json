@@ -112,36 +112,36 @@
   "sha256": "06687b042f67d04b91fca549f78a8dd1511503f8036178227f9de3021265d3f0"
  },
  "15-scan-the-structures/data/surfaces-ground.json": {
-  "bytes": 8013,
-  "sha256": "6c3193936b37584093525b6e0f745ba49b5d108831ca7f4cf67c7c3f7e15a8f6"
+  "bytes": 7917,
+  "sha256": "ad6ba37eceb561218a89ab23586da4da7ce4a29079c4b872aa023884a354b4af"
  },
  "15-scan-the-structures/data/surfaces-ground.json.gz": {
-  "bytes": 2204,
-  "sha256": "81be67bf9e7decc874ea67b831a13ca771b1c1545ba7cee03c04c76ed7c74b47"
+  "bytes": 2178,
+  "sha256": "bb7f497751dffa452e5fd6d1d8a5a534d0d1f78fe2844aecb91dd267762cf1a4"
  },
  "15-scan-the-structures/data/surfaces-ground.planes.i16.gz": {
-  "bytes": 1353935,
-  "sha256": "3e588b111f8d17f887348c659c8fbfa1a723e1d5acda8638fc2b9588f80abe4e"
+  "bytes": 953719,
+  "sha256": "3e8910adcf0a3c92321ab1ebf60de3b12a5d64708bbab167396227b5385d81a8"
  },
  "15-scan-the-structures/data/surfaces-ground.planes.u16.gz": {
-  "bytes": 760022,
-  "sha256": "b5cbf356fefe6234b1a83dad5236a9e196e6415b75c8a17ae8749fdf68969e89"
+  "bytes": 825894,
+  "sha256": "913055859257c7a47f86c3c8eadfeb82081efca7a2a2831987e83c9e6ddd862d"
  },
  "15-scan-the-structures/data/surfaces-lines.json": {
-  "bytes": 5460,
-  "sha256": "48b1e2b7ce3b0c924a94ec0fa617cb1743a975c49eb5d40adedb17c3de0a187a"
+  "bytes": 5389,
+  "sha256": "1d21789df11b4074d2e2abb7f3cfae797e10a78f19590a86d6efc5174945ea11"
  },
  "15-scan-the-structures/data/surfaces-lines.json.gz": {
-  "bytes": 1581,
-  "sha256": "a543167aca10285bd2ca2c4bbc52ab9366a0fdd6a36032e315d88a98db90af2b"
+  "bytes": 1551,
+  "sha256": "26a15e6912b026762fd406f0bda8aa4e8a970fbd79f3c5a3b2d7148012f43854"
  },
  "15-scan-the-structures/data/surfaces-lines.planes.i16.gz": {
-  "bytes": 246198,
-  "sha256": "59b63a5e155dd0bbb60a650b83e536180cd400e5d47e9023231d40f7b9b268c4"
+  "bytes": 257703,
+  "sha256": "dcc3872f8f74869fd967d1315d0cedc5d42e72f528100872d2cd49dec3fac868"
  },
  "15-scan-the-structures/data/surfaces-lines.planes.u16.gz": {
-  "bytes": 8505,
-  "sha256": "bc1a1f04c39530df25d66090fe5fbd62ac102cf22e5b42282b8f0f0719071ee1"
+  "bytes": 23326,
+  "sha256": "dcc4a625ece903f51ca4ac2069ae3d3e6b059fbcc9c865e5f5af27020b8d0abb"
  },
  "15-scan-the-structures/data/trees-web.json": {
   "bytes": 7169,
