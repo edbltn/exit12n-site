@@ -1,16 +1,16 @@
 {
- "build": "20261122T015704Z-3f32dda",
- "entry": "assets/index-D2eGQCFo.js",
+ "build": "20261122T143810Z-3ffe075",
+ "entry": "assets/index-D8aB2-uG.js",
  "css": [
-  "assets/index-DKoUjOGf.css"
+  "assets/index-BJ0Wu9lg.css"
  ],
  "integrity": {
   "assets/20-route-in-a-worker-B0UnfRj9.js": "sha384-mk4quRvHbHshlW6a7Xi+PosGnovm3LGG2XY2x5/7Q2nYDi5ORX12UBS2XoYA97iv",
-  "assets/index-D2eGQCFo.js": "sha384-WRLTEwMluWbY0oRiAadryKwY7x2gCY8ujrH9mF9bneUMCc+Ov64soOZyWlzqXgri",
-  "assets/index-DKoUjOGf.css": "sha384-kp29cmFb70ovBUalh3RBdMd2uypkORmUCKHnUAG34+PYJzm3OA74yv3xPCdTKcE5"
+  "assets/index-BJ0Wu9lg.css": "sha384-i2vIRuI5C0sB/zHcTAukH6Wos0NqqC6Zde5aClURw5J3z6BHusuOI4vnoKi2R4Bv",
+  "assets/index-D8aB2-uG.js": "sha384-W69IVC3KQoN459NerZI9lHxm26yeH/J+yI+VSyBIfpAVmnYKzmsjXKqIgWysogpu"
  },
- "content": "072a8bd2ed2c805892ed33e437a96716cf09153c0d1d349fdd51cc4932ebc5d9",
+ "content": "87f9481a014d2d0896958e5f8a6c3c282d0e19daa0386f68f2c07cb21abeea18",
  "env": "production",
- "commit": "3f32dda6300caf54be3ee97589af139075d4a625",
+ "commit": "3ffe075e9c379ed73fc0aaad0507584887943353",
  "area": ""
 }
