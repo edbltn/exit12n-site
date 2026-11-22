@@ -52,7 +52,9 @@ function drawLine(model, park, width) {
 
   for (const { band: s, near, far } of [...L.today.drawn, ...L.after.drawn]) {
     const d = `M${near.map((y, b) => `${xb(b).toFixed(1)},${y.toFixed(1)}`).join("L")}L${far.map((y, b) => `${xb(b).toFixed(1)},${y.toFixed(1)}`).reverse().join("L")}Z`;
-    const tip = s.kind === "cover" ? cap(s.label) : tipOf(s.label, votes(s.for, s.against));
+    // a stream of several same-name proposals reads like a merged bubble: "3 proposals, Boardwalk", then the votes added
+    const named = s.count > 1 ? `${s.count} proposals, ${s.label}` : s.label;
+    const tip = s.kind === "cover" ? cap(s.label) : s.kind === "removal" ? tipOf(`${named}: this ground turns to grass`, votes(s.for, s.against)) : tipOf(named, votes(s.for, s.against));
     parts.push(`<path d="${d}" fill="${s.color ?? UNCLASSED}" stroke="${PAPER}" stroke-width="0.8" data-tip="${esc(tip)}"/>` +
       (s.kind === "cover" ? `<path d="${d}" fill="url(#tx-${s.key})" pointer-events="none"/>` : ""));
   }
@@ -131,7 +133,7 @@ function drawLine(model, park, width) {
   }).join("");
   const side = (y, t) => `<text x="${narrow ? X0 + 4 : 0}" y="${y}" font-size="14" fill="${INK}" class="caps" stroke="${PAPER}" stroke-width="3" paint-order="stroke">${t}</text>`;
 
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="The exit as a line with its stops. Above it, the park's width today by land cover; below it, the same width with the shown proposals laid over it; each proposed thing is a bubble near its distance along the exit.">
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="The exit as a line with its stops. Above it, the park's width today by land cover; below it, only the shown proposals, on a wider scale; each proposed thing is a bubble near its distance along the exit.">
     <defs>${patterns()}</defs><g transform="translate(0 ${Y0})">${parts.join("")}</g>
     <line x1="${X0}" y1="${Y0}" x2="${X1}" y2="${Y0}" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>
     ${xAxis}${yAxis}${stopMarks}${side(Y0 - GAP - 8, "Today")}${side(Y0 + GAP + 16, "Proposed")}</svg>`;
@@ -145,7 +147,9 @@ function lineKey(model) {
   const item = (s) => `<span class="item">${swatch(s)}${esc(s.label)}</span>`;
   const seen = new Set();
   const paths = st.proposed.filter((s) => s.shape === "line" && !seen.has(`${s.label}|${s.color}`) && seen.add(`${s.label}|${s.color}`));
-  return `<span class="caps">Today</span> ${st.today.map(item).join("")}` + (paths.length ? `<br><span class="caps">Proposed paths</span> ${paths.map(item).join("")}` : "");
+  const rm = (st.below ?? []).find((s) => s.kind === "removal");
+  return `<span class="caps">Today</span> ${st.today.map(item).join("")}` + (paths.length ? `<br><span class="caps">Proposed paths</span> ${paths.map(item).join("")}` : "") +
+    (rm ? `<br><span class="caps">Removals</span> <span class="item"><span class="key" style="background:${rm.color}"></span>ground that turns to grass</span>` : "");
 }
 
 // ---------- 2. the shortlist ----------

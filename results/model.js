@@ -239,6 +239,46 @@ const COVER_NAMES = { none: "other", "leaf-litter": "woods" };
  *  spot like any other proposal.
  *
  *  No ground is counted twice, so both stacks add up to the park's full width at every section. */
+/** Streams of the same name that touch are one (Eric, 2026-11-22 11:47: "whenever streams touch each other in the
+ *  visual representation, merge them and add their votes"; same name only, by his 10:27 rule): within each name and
+ *  kind (a path never merges with a removal), streams whose stretches along the exit overlap or meet end to end (no
+ *  empty section between them) become one stream: its width the sum of theirs at each section (each took only ground
+ *  no other had taken, so the sum is the ground they cover together), its votes the sums of theirs, `count` how many.
+ *  Nothing is random, and the order given does not matter. */
+export function mergeTouching(list) {
+  const key = (x) => `${x.kind}|${String(x.label ?? "").trim().toLowerCase()}`;
+  const span = (x) => {
+    let lo = Infinity, hi = -Infinity;
+    x.width.forEach((v, b) => { if (v > 1e-9) { lo = Math.min(lo, b); hi = Math.max(hi, b); } });
+    return [lo, hi];
+  };
+  const byKey = new Map();
+  for (const x of list) byKey.set(key(x), [...(byKey.get(key(x)) ?? []), x]);
+  const out = [];
+  for (const k of [...byKey.keys()].sort()) {
+    const sorted = byKey.get(k).map((x) => ({ x, sp: span(x) })).sort((a, b) => a.sp[0] - b.sp[0] || (a.x.key < b.x.key ? -1 : a.x.key > b.x.key ? 1 : 0));
+    let cur = [], hi = -Infinity;
+    const close = () => {
+      if (!cur.length) return;
+      const ms = [...cur].sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+      const first = ms[0];
+      out.push(ms.length === 1 ? { ...first, count: 1 } : {
+        ...first, key: ms.map((x) => x.key).join("+"), label: String(first.label).trim(), count: ms.length,
+        for: ms.reduce((t, x) => t + x.for, 0), against: ms.reduce((t, x) => t + x.against, 0),
+        areaM2: ms.reduce((t, x) => t + (x.areaM2 ?? 0), 0),
+        width: first.width.map((_, b) => ms.reduce((t, x) => t + x.width[b], 0)),
+      });
+      cur = []; hi = -Infinity;
+    };
+    for (const { x, sp } of sorted) {
+      if (cur.length && sp[0] > hi + 1) close();
+      cur.push(x); hi = Math.max(hi, sp[1]);
+    }
+    close();
+  }
+  return out.sort((a, b) => span(a)[0] - span(b)[0] || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+}
+
 export function streams(shown, park, m) {
   const K = park.rows[0].length;
   const nc = park.classes.length;
@@ -330,13 +370,14 @@ export function streams(shown, park, m) {
   const removals = [];
   for (const it of shown) {
     if (it.change !== "remove") continue;
-    const r = { id: it.id, label: it.name, for: it.for, against: it.against, areaM2: 0, turnedM2: 0, bins: new Set() };
+    const r = { id: it.id, label: it.name, for: it.for, against: it.against, areaM2: 0, turnedM2: 0, bins: new Set(), width: new Array(m.bins).fill(0) };
     for (const [b, c, share] of cellsOf(it)) {
       const got = free(b, c, share);
       if (got <= 0) continue;
       used.set(b * K + c, (used.get(b * K + c) ?? 0) + got);
       const cls = Number(park.rows[b][c]);
       r.areaM2 += got * cellM2;
+      r.width[b] += got * park.cellM;
       r.bins.add(b);
       if (cls === grass) continue; // grass it was, grass it stays
       after[cls][b] -= got * park.cellM;
@@ -355,12 +396,20 @@ export function streams(shown, park, m) {
     width: smooth(widths[i]), areaM2: area(widths[i]), givesM2: from[i], turnedToGrassM2: toGrass[i],
   }));
   const proposed = bands.map((x) => ({ ...x, width: smooth(x.width), areaM2: area(x.width) })).filter((x) => x.areaM2 > 0);
+  // below the line, only what is proposed (Eric, 2026-11-22 11:47): each path's band, and each removal as a band of the
+  // ground it covers, which turns to grass; same-name streams that touch are one, their votes added
+  const grassColor = park.classes[grass]?.color ?? "#8fb36b";
+  // (they touch as drawn, so the widths are smoothed first, as the chart draws them)
+  const below = mergeTouching([
+    ...bands.map((x) => ({ ...x, width: smooth(x.width), areaM2: area(x.width) })),
+    ...removals.map((r) => ({ key: r.id, kind: "removal", shape: "line", label: r.label, color: grassColor, for: r.for, against: r.against, width: smooth(r.width), areaM2: area(r.width) })),
+  ]).filter((x) => x.areaM2 > 0);
   const total = today.reduce((a, w) => a + area(w), 0);
   const widths = park.rows.map((row) => [...row].filter((ch) => ch !== ".").length * park.cellM);
   return {
     today: cover(today),
     after: [...proposed, ...cover(after)],
-    proposed, taken, removals,
+    proposed, taken, removals, below,
     parkAreaM2: total,
     takenM2: proposed.reduce((a, x) => a + x.areaM2, 0),
     turnedToGrassM2: toGrass.reduce((a, v) => a + v, 0),

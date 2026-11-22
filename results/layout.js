@@ -109,7 +109,10 @@ export function station(metres) {
  *  (100 on a wide chart, 200 on a narrow one) and one at the end; a round tick too close to the end to be read
  *  beside it is left out. Y: metres across the park, out from the line both ways, a tick every 50 m as far as the
  *  park is wide; only on a wide chart, where there is a margin to hold it. */
-export function axisTicks(length, widthMax, x, PXM, GAP, narrow) {
+/** The ranges the Proposed side's scale can take, in metres out from the line: the smallest that holds every proposal. */
+export const BELOW_RANGES = [10, 20, 25, 50, 75, 100, 150, 200];
+
+export function axisTicks(length, widthMax, x, PXM, GAP, narrow, rangeBelow = widthMax, PXMB = PXM) {
   const step = narrow ? 200 : 100;
   const end = Math.round(length);
   const minGap = 46; // pixels a label needs
@@ -118,7 +121,12 @@ export function axisTicks(length, widthMax, x, PXM, GAP, narrow) {
   for (let s = 0; s < length; s += step) if (x(length) - x(s) >= minGap) xs.push({ s, x: x(s), label: station(s) });
   xs.push({ s: length, x: x(length), label: station(end) });
   const ys = [];
-  if (!narrow) for (let w = 50; w <= widthMax; w += 50) for (const dir of [-1, 1]) ys.push({ m: w, dir, y: dir * (GAP + w * PXM), label: `${w} m` });
+  if (!narrow) {
+    // Today: every 50 m across the park; Proposed, on its own scale, at a step that fits its range
+    for (let w = 50; w <= widthMax; w += 50) ys.push({ m: w, dir: -1, y: -(GAP + w * PXM), label: `${w} m` });
+    const step = rangeBelow <= 20 ? 5 : rangeBelow <= 50 ? 10 : rangeBelow <= 100 ? 25 : 50;
+    for (let w = step; w <= rangeBelow + 1e-9; w += step) ys.push({ m: w, dir: 1, y: GAP + w * PXMB, label: `${w} m` });
+  }
   return { x: xs, y: ys, step };
 }
 
@@ -133,22 +141,29 @@ export function layoutLine(model, park, width) {
   const X1 = W - (narrow ? 8 : 14);
   const x = (s) => X0 + (s / m.length) * (X1 - X0);
   const xb = (b) => x(Math.min(m.length, (b + 0.5) * park.binM));
-  const PXM = (narrow ? 120 : 170) / st.widthMax; // pixels per metre across, the same for bands and bubbles
+  const HALF = narrow ? 120 : 170; // pixels from the line to the outer edge of each side's scale
+  const PXM = HALF / st.widthMax; // Today: pixels per metre across, the park's full width; bubbles keep this scale
+  // Proposed shows only the proposals, so it gets its own, wider scale: the smallest round range that holds the
+  // tallest stack of them (Eric, 2026-11-22 11:47: "widen the scale in Proposed so everything that was proposed fits")
+  const below = st.below ?? [];
+  const tallest = Math.max(0, ...Array.from({ length: m.bins }, (_, b) => below.reduce((t, s) => t + s.width[b], 0)));
+  const rangeBelow = BELOW_RANGES.find((r) => r >= tallest) ?? Math.ceil(tallest / 50) * 50;
+  const PXMB = HALF / rangeBelow;
   const R = (a) => Math.max(3, PXM * Math.sqrt(a / Math.PI));
   const GAP = 8;
 
   /** Stack bands outward from the line: each band's near and far edge at every section, and the outer edge. */
-  const stack = (bands, dir) => {
+  const stack = (bands, dir, pxm) => {
     let base = Array.from({ length: m.bins }, () => dir * GAP);
     const drawn = bands.map((s) => {
       const near = base;
-      base = base.map((y, b) => y + dir * s.width[b] * PXM);
+      base = base.map((y, b) => y + dir * s.width[b] * pxm);
       return { band: s, near, far: base };
     });
     return { drawn, edge: base };
   };
-  const today = stack(st.today, -1);
-  const after = stack(st.after, 1);
+  const today = stack(st.today, -1, PXM);
+  const after = stack(below, 1, PXMB);
 
   // the outer edge of the bands at a pixel x, read between the sections either side
   const edgeAt = (edge) => (px) => {
@@ -163,6 +178,8 @@ export function layoutLine(model, park, width) {
     const clear = (px, r) => {
       let far = -Infinity;
       for (let k = -r; k <= r; k += 2) far = Math.max(far, dir * at(px + k));
+      // and every section's own centre under it: on the Proposed side's wider scale an edge can rise steeply between samples
+      for (let b = 0; b < m.bins; b++) if (Math.abs(xb(b) - px) <= r) far = Math.max(far, dir * edge[b]);
       return dir * (Math.max(far, dir * at(px + r)) + r + 3);
     };
     const circles = list.map((o) => ({ x: x(o.s), r: R(o.areaM2) }));
@@ -171,12 +188,12 @@ export function layoutLine(model, park, width) {
   // nearby proposed things of the same name merge before they are laid out
   const merged = mergeBubbles(ob.proposed, MERGE_M(park));
   return {
-    W, narrow, X0, X1, PXM, GAP, x, xb, today, after,
+    W, narrow, X0, X1, PXM, PXMB, GAP, x, xb, today, after,
     there: settle(ob.there, today.edge, -1),
     proposed: settle(merged, after.edge, 1),
     mostNet: Math.max(1, ...merged.map((o) => o.net)),
-    axes: axisTicks(m.length, st.widthMax, x, PXM, GAP, narrow),
-    half: st.widthMax * PXM,
+    axes: axisTicks(m.length, st.widthMax, x, PXM, GAP, narrow, rangeBelow, PXMB),
+    half: HALF, rangeBelow,
     metresPerPixel: m.length / (X1 - X0),
   };
 }
