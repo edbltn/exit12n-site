@@ -306,7 +306,10 @@ function render(subs) {
     `Dark means ${park.config.winSupport} or more people for it than against, the app's own bar; light means one.`;
 }
 
+let refreshing = false; // one rebuild at a time: a check that finds the last one still running is skipped (Eric, 2026-11-22 14:40)
 async function refresh() {
+  if (refreshing) return;
+  refreshing = true;
   try {
     let text = null;
     let error = null;
@@ -348,6 +351,8 @@ async function refresh() {
       ? `The live data did not answer just now (${e.message}). Showing what it said at ${lastGood.toLocaleTimeString()}; still trying every ${REFRESH_S} seconds.`
       : `The live data is not answering (${e.message}). Trying again every ${REFRESH_S} seconds.`;
     $("status").classList.add("stale");
+  } finally {
+    refreshing = false;
   }
 }
 
