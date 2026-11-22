@@ -1,6 +1,6 @@
 {
- "build": "20261122T000156Z-f76f188",
- "entry": "assets/index-D7Qo43n4.js",
+ "build": "20261122T001445Z-0ea14ee",
+ "entry": "assets/index-DfItZphW.js",
  "css": [
   "assets/index-Cgh5NgNo.css"
  ],
@@ -8,10 +8,10 @@
   "assets/06-answer-in-the-worker-DcQsSvs5.js": "sha384-tDbLSN5+WaDx1bE9cwF6ip2bfte7IC8N1Zth+fjuFdbZ01ZAiA986wUgi48WH+0m",
   "assets/20-route-in-a-worker-CmZduLVZ.js": "sha384-SLTXsisqjj4TY8/+Q0iEg1QhLpVSB4eoyrbRcWJ6tKL3X2OgDFwC5B65dCsneRMV",
   "assets/index-Cgh5NgNo.css": "sha384-NOT0kNfmKZhNgFfvo90G8BwX3Me7TTqHSC1vaO/1cYve35HRIYG9aCAyv3CaN6Np",
-  "assets/index-D7Qo43n4.js": "sha384-tR2Z6MPFPKD7lfOXJah7gN01vjX15RQGPRAmY6CvMT8C+p4ouagnd+idd8HXeSNc"
+  "assets/index-DfItZphW.js": "sha384-5ptYMFg723nDlOqNNXftIlFIcIVzLoCbcRyqCd7uHBxCzNb+/hQGNwjU4jAmP8tO"
  },
- "content": "741e831b14ed52184b760d9bacb954cf39566d65081b149e4c3b35f2a7a138fd",
+ "content": "739a80b5783b1fd69f77edb207ff41ee0d7dfc80f7475e17cbf73a5d3b8380cc",
  "env": "final-production",
- "commit": "f76f188b38817b8d268ae9ec51938248bd1b55f7",
+ "commit": "0ea14eed061b7f07cc575d1ea7f62b6d1271da13",
  "area": ""
 }
