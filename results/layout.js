@@ -7,28 +7,40 @@ export const BUBBLE_PAD = 1.5;
  *  all. Only one that would hang off either end of the page is brought just inside it. */
 export const BUBBLE_NUDGE = 0;
 
-/** How close two bubbles must stand along the exit to merge: their centres nearer than this share of the sum of
- *  their radii. The editor's pins merge when their heads would overlap (a share of 1); here a quarter of that, so
- *  only near neighbours merge and most bubbles stay single. */
-export const MERGE_SHARE = 0.25;
+/** How close two proposals of the same name must stand along the exit to merge, in metres: the app's own reach
+ *  for a point (park.config.reachM, 40 m), the distance its shortlist already uses for same-named points. */
+export const MERGE_M = (park) => park.config.reachM;
 /** The colour of a merged bubble whose members are of different types: the app's grey for a type with no family. */
 export const MIXED_COLOR = "#9e9e9e";
 
-/** Light merging of nearby bubbles, the way the editor merges its pins. Things are stood in a fixed order, the most
- *  wanted first (net votes), then by id. One that stands close to a bubble already standing (MERGE_SHARE) joins it;
- *  the first it is close to, of any type. `xOf` and `rOf` give a thing's place and radius in pixels, so a narrower
- *  chart merges more, as zooming out does. A merged bubble's area is the sum of its members' footprints, its place
- *  their footprint-weighted mean distance along the exit, its votes the sums of theirs; its colour is theirs if they
- *  are all of one type, else grey. A bubble of one is that thing unchanged. Nothing is random. */
-export function mergeBubbles(things, xOf, rOf) {
-  const order = [...things].sort((a, b) => b.net - a.net || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+const nameKey = (o) => String(o.name ?? "").trim().toLowerCase();
+
+/** Light merging of bubbles (Eric, 2026-11-22, ts 1795361234.573059): only proposals with the same name merge, never
+ *  two with different names, even of one type or colour. Within each name, things are taken in order along the exit,
+ *  and one nearer than `mergeM` metres to the last one joins its bubble, so a chain of near neighbours is one bubble.
+ *  The same on every screen width. A merged bubble's area is the sum of its members' footprints, its place their
+ *  footprint-weighted mean distance along the exit, its votes the sums of theirs; its colour is theirs if they are
+ *  all of one type, else grey. Members are listed most wanted first (net votes), then by id. A bubble of one is that
+ *  thing unchanged. Nothing is random, and the order given does not matter. */
+export function mergeBubbles(things, mergeM) {
+  const byId = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  const byName = new Map();
+  for (const o of things) byName.set(nameKey(o), [...(byName.get(nameKey(o)) ?? []), o]);
   const stacks = [];
-  for (const o of order) {
-    const lead = stacks.find((k) => Math.abs(xOf(k[0]) - xOf(o)) < MERGE_SHARE * (rOf(k[0]) + rOf(o)));
-    if (lead) lead.push(o);
-    else stacks.push([o]);
+  for (const key of [...byName.keys()].sort()) {
+    const along = [...byName.get(key)].sort((a, b) => a.s - b.s || byId(a, b));
+    let cur = [];
+    for (const o of along) {
+      if (cur.length && o.s - cur[cur.length - 1].s >= mergeM) {
+        stacks.push(cur);
+        cur = [];
+      }
+      cur.push(o);
+    }
+    if (cur.length) stacks.push(cur);
   }
-  return stacks.map((members) => {
+  const merged = stacks.map((stack) => {
+    const members = [...stack].sort((a, b) => b.net - a.net || byId(a, b));
     if (members.length === 1) return { ...members[0], members };
     const areaM2 = members.reduce((t, o) => t + o.areaM2, 0);
     const votesFor = members.reduce((t, o) => t + o.for, 0);
@@ -39,10 +51,11 @@ export function mergeBubbles(things, xOf, rOf) {
       s: areaM2 > 0 ? members.reduce((t, o) => t + o.s * o.areaM2, 0) / areaM2 : members.reduce((t, o) => t + o.s, 0) / members.length,
       for: votesFor, against: votesAgainst, net: votesFor - votesAgainst,
       color: oneType ? members[0].color : MIXED_COLOR,
-      name: `${members.length} proposals: ${members.map((o) => o.name).join(", ")}`,
+      name: `${members.length} proposals, ${String(members[0].name ?? "").trim()}`,
       inPark: members.every((o) => o.inPark),
     };
   });
+  return merged.sort((a, b) => a.s - b.s || byId(a, b));
 }
 
 /** A beeswarm constrained on x: each circle keeps its own x, and y is free. Circles are set largest first. Each
@@ -155,8 +168,8 @@ export function layoutLine(model, park, width) {
     const circles = list.map((o) => ({ x: x(o.s), r: R(o.areaM2) }));
     return beeswarm(circles, clear, dir, 0, W).map((c) => ({ o: list[c.i], cx: c.x, cy: c.y, r: c.r, home: x(list[c.i].s) }));
   };
-  // nearby proposed things merge lightly, like the editor's pins, before they are laid out
-  const merged = mergeBubbles(ob.proposed, (o) => x(o.s), (o) => R(o.areaM2));
+  // nearby proposed things of the same name merge before they are laid out
+  const merged = mergeBubbles(ob.proposed, MERGE_M(park));
   return {
     W, narrow, X0, X1, PXM, GAP, x, xb, today, after,
     there: settle(ob.there, today.edge, -1),
