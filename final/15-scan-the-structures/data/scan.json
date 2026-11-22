@@ -1,0 +1,855 @@
+{
+ "origin": {
+  "lat": 40.81765,
+  "lon": -73.961037
+ },
+ "box": {
+  "south": 40.792,
+  "north": 40.826,
+  "west": -73.979,
+  "east": -73.945
+ },
+ "grid": {
+  "cellM": 0.5,
+  "width": 5729,
+  "height": 7570,
+  "localBounds": [
+   -1513.3158983758706,
+   -2855.477999999991,
+   1351.1841016241294,
+   929.5220000000088
+  ]
+ },
+ "counts": {
+  "trees": 26036,
+  "treesMatched": 6867,
+  "inventoryTrees": 16762,
+  "buildings": 5906,
+  "buildingTriangles": 479547,
+  "buildingsMissing": 53,
+  "footprints": 5898,
+  "decks": 25,
+  "portals": 5,
+  "piers": 7,
+  "seawalls": 4,
+  "shoreLines": 6,
+  "bridgeElevationPoints": 102
+ },
+ "tiles": {
+  "990227": {
+   "points": 14644528,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 2907641,
+    "2": 3218883,
+    "3": 91483,
+    "4": 406161,
+    "5": 3631551,
+    "6": 3552296,
+    "7": 32082,
+    "8": 302252,
+    "9": 117498,
+    "18": 384681
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    6237,
+    0,
+    7570,
+    1483
+   ],
+   "bytes": 440166443,
+   "downloadS": 571.6,
+   "rasteriseS": 3.3,
+   "frame": "EPSG:6539->EPSG:9057"
+  },
+  "990230": {
+   "points": 7754567,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 1248818,
+    "2": 1799616,
+    "3": 49905,
+    "4": 239147,
+    "5": 2910901,
+    "6": 733521,
+    "7": 22417,
+    "8": 192973,
+    "9": 319892,
+    "18": 237377
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    4709,
+    170,
+    6240,
+    1484
+   ],
+   "bytes": 233155545,
+   "downloadS": 579.2,
+   "rasteriseS": 2.9,
+   "frame": "EPSG:6539->EPSG:9057"
+  },
+  "990232": {
+   "points": 783739,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 210121,
+    "2": 145575,
+    "3": 3281,
+    "4": 13182,
+    "5": 198116,
+    "6": 452,
+    "7": 3567,
+    "8": 17933,
+    "9": 160362,
+    "18": 31150
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    3841,
+    980,
+    4713,
+    1484
+   ],
+   "bytes": 23646255,
+   "downloadS": 549.9,
+   "rasteriseS": 0.2,
+   "frame": "EPSG:6539->EPSG:9057"
+  },
+  "992227": {
+   "points": 19256316,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 3331743,
+    "2": 4916231,
+    "3": 150101,
+    "4": 693115,
+    "5": 5729540,
+    "6": 3786780,
+    "7": 28212,
+    "8": 381042,
+    "18": 239552
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    6237,
+    1480,
+    7570,
+    3005
+   ],
+   "bytes": 578743335,
+   "downloadS": 58.6,
+   "rasteriseS": 4.1,
+   "frame": "EPSG:6539->EPSG:9057"
+  },
+  "992230": {
+   "points": 17387562,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 3552502,
+    "2": 3847920,
+    "3": 124514,
+    "4": 570750,
+    "5": 3120464,
+    "6": 5480307,
+    "7": 30274,
+    "8": 309876,
+    "18": 350955
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    4710,
+    1480,
+    6241,
+    3006
+   ],
+   "bytes": 522630551,
+   "downloadS": 60.7,
+   "rasteriseS": 3.8,
+   "frame": "EPSG:6539->EPSG:9057"
+  },
+  "992232": {
+   "points": 15711669,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 2625629,
+    "2": 3619534,
+    "3": 110430,
+    "4": 467815,
+    "5": 5076841,
+    "6": 2882217,
+    "7": 39057,
+    "8": 334514,
+    "9": 194045,
+    "18": 361587
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    3182,
+    1481,
+    4713,
+    3006
+   ],
+   "bytes": 472221993,
+   "downloadS": 67.1,
+   "rasteriseS": 3.3,
+   "frame": "EPSG:6539->EPSG:9057"
+  },
+  "992235": {
+   "points": 6809512,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 1071646,
+    "2": 1717196,
+    "3": 74831,
+    "4": 276908,
+    "5": 2486986,
+    "6": 514638,
+    "7": 17277,
+    "8": 172272,
+    "9": 333595,
+    "18": 144163
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    1654,
+    1806,
+    3186,
+    3007
+   ],
+   "bytes": 204773539,
+   "downloadS": 38.2,
+   "rasteriseS": 1.3,
+   "frame": "EPSG:6539->EPSG:9057"
+  },
+  "992237": {
+   "points": 176175,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 50154,
+    "2": 22952,
+    "3": 3921,
+    "4": 6823,
+    "5": 3807,
+    "6": 563,
+    "7": 1590,
+    "8": 1256,
+    "9": 72512,
+    "18": 12597
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    1183,
+    2687,
+    1658,
+    3007
+   ],
+   "bytes": 5347415,
+   "downloadS": 8.8,
+   "rasteriseS": 0.1,
+   "frame": "EPSG:6539->EPSG:9057"
+  },
+  "995227": {
+   "points": 22215500,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 1958621,
+    "2": 6755565,
+    "3": 430586,
+    "4": 1526219,
+    "5": 10470841,
+    "6": 319256,
+    "7": 33560,
+    "8": 457821,
+    "9": 61196,
+    "18": 201835
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    6238,
+    3001,
+    7570,
+    4526
+   ],
+   "bytes": 667661167,
+   "downloadS": 88.5,
+   "rasteriseS": 4.0,
+   "frame": "EPSG:6539->EPSG:9057"
+  },
+  "995230": {
+   "points": 20908990,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 3728731,
+    "2": 4770761,
+    "3": 211220,
+    "4": 890025,
+    "5": 5917822,
+    "6": 4684126,
+    "7": 42039,
+    "8": 389267,
+    "18": 274999
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    4710,
+    3002,
+    6242,
+    4527
+   ],
+   "bytes": 628420093,
+   "downloadS": 91.8,
+   "rasteriseS": 4.0,
+   "frame": "EPSG:6539->EPSG:9057"
+  },
+  "995232": {
+   "points": 19605653,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 3796940,
+    "2": 4601027,
+    "3": 205737,
+    "4": 818939,
+    "5": 4154524,
+    "6": 5403223,
+    "7": 38802,
+    "8": 372385,
+    "18": 214076
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    3183,
+    3003,
+    4714,
+    4528
+   ],
+   "bytes": 589250155,
+   "downloadS": 83.1,
+   "rasteriseS": 3.5,
+   "frame": "EPSG:6539->EPSG:9057"
+  },
+  "995235": {
+   "points": 17680190,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 3390921,
+    "2": 4820970,
+    "3": 141594,
+    "4": 427884,
+    "5": 3217727,
+    "6": 4983726,
+    "7": 23028,
+    "8": 403456,
+    "18": 270884
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    1655,
+    3003,
+    3186,
+    4529
+   ],
+   "bytes": 531435701,
+   "downloadS": 80.0,
+   "rasteriseS": 4.6,
+   "frame": "EPSG:6539->EPSG:9057"
+  },
+  "995237": {
+   "points": 13518197,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 2517803,
+    "2": 3485494,
+    "3": 119934,
+    "4": 429577,
+    "5": 1810289,
+    "6": 4060613,
+    "7": 39610,
+    "8": 294148,
+    "9": 399601,
+    "18": 361128
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    127,
+    3004,
+    1659,
+    4530
+   ],
+   "bytes": 406345445,
+   "downloadS": 82.9,
+   "rasteriseS": 2.6,
+   "frame": "EPSG:6539->EPSG:9057"
+  },
+  "995240": {
+   "points": 6021688,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 868899,
+    "2": 1889602,
+    "3": 59901,
+    "4": 279419,
+    "5": 1591694,
+    "6": 609512,
+    "7": 25039,
+    "8": 124052,
+    "9": 349772,
+    "18": 223798
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    0,
+    3249,
+    131,
+    4530
+   ],
+   "bytes": 181097833,
+   "downloadS": 22.3,
+   "rasteriseS": 0.9,
+   "frame": "EPSG:6539->EPSG:9057"
+  },
+  "997227": {
+   "points": 17823681,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 3323726,
+    "2": 4303627,
+    "3": 153014,
+    "4": 576479,
+    "5": 4654056,
+    "6": 4181679,
+    "7": 57771,
+    "8": 348086,
+    "9": 64981,
+    "18": 160262
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    6239,
+    4522,
+    7570,
+    5729
+   ],
+   "bytes": 535715215,
+   "downloadS": 98.9,
+   "rasteriseS": 3.4,
+   "frame": "EPSG:6539->EPSG:9057"
+  },
+  "997230": {
+   "points": 19535346,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 3610262,
+    "2": 4676516,
+    "3": 157743,
+    "4": 734735,
+    "5": 4707045,
+    "6": 5026014,
+    "7": 37125,
+    "8": 396702,
+    "18": 189204
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    4711,
+    4523,
+    6243,
+    5729
+   ],
+   "bytes": 587143343,
+   "downloadS": 72.5,
+   "rasteriseS": 3.7,
+   "frame": "EPSG:6539->EPSG:9057"
+  },
+  "997232": {
+   "points": 18401778,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 3564697,
+    "2": 4100541,
+    "3": 159642,
+    "4": 691960,
+    "5": 2933894,
+    "6": 6212795,
+    "7": 154520,
+    "8": 336429,
+    "18": 247300
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    3183,
+    4524,
+    4715,
+    5729
+   ],
+   "bytes": 553090665,
+   "downloadS": 115.8,
+   "rasteriseS": 3.7,
+   "frame": "EPSG:6539->EPSG:9057"
+  },
+  "997235": {
+   "points": 19748353,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 3409516,
+    "2": 5265245,
+    "3": 219552,
+    "4": 864906,
+    "5": 4718724,
+    "6": 4531758,
+    "7": 38512,
+    "8": 413760,
+    "18": 286380
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    1656,
+    4525,
+    3187,
+    5729
+   ],
+   "bytes": 593547639,
+   "downloadS": 108.5,
+   "rasteriseS": 3.8,
+   "frame": "EPSG:6539->EPSG:9057"
+  },
+  "997237": {
+   "points": 19454178,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 3729995,
+    "2": 4285252,
+    "3": 166523,
+    "4": 725309,
+    "5": 4039418,
+    "6": 5668934,
+    "7": 47384,
+    "8": 377883,
+    "18": 413480
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    128,
+    4526,
+    1660,
+    5729
+   ],
+   "bytes": 584679823,
+   "downloadS": 78.8,
+   "rasteriseS": 4.0,
+   "frame": "EPSG:6539->EPSG:9057"
+  },
+  "997240": {
+   "points": 17799864,
+   "lasVersion": "1.4",
+   "pointFormat": 6,
+   "classes": {
+    "1": 3251810,
+    "2": 3972601,
+    "3": 183702,
+    "4": 596460,
+    "5": 4382216,
+    "6": 4495574,
+    "7": 54956,
+    "8": 376307,
+    "9": 18065,
+    "18": 468173
+   },
+   "flownFrom": "2021-05-15",
+   "flownTo": "2021-05-20",
+   "window": [
+    0,
+    4527,
+    132,
+    5729
+   ],
+   "bytes": 535007443,
+   "downloadS": 45.0,
+   "rasteriseS": 1.9,
+   "frame": "EPSG:6539->EPSG:9057"
+  }
+ },
+ "flownOn": [
+  "2021-05-15",
+  "2021-05-20"
+ ],
+ "timingsS": {
+  "lidarTiles": 0.6,
+  "mosaic": 4.8,
+  "buildings": 39.2,
+  "crowns": 11.1,
+  "decks": 2.6,
+  "total": 168.7
+ },
+ "sanity": {
+  "decks": [
+   {
+    "label": "Riverside Drive viaduct",
+    "kind": "bridge",
+    "at": [
+     40.82313,
+     -73.95665
+    ],
+    "deckZ": [
+     20.26,
+     22.41
+    ],
+    "groundZ": 7.82,
+    "clearanceM": [
+     12.4,
+     18.7
+    ],
+    "zSource": "elevation-points",
+    "elevationPoints": 2
+   },
+   {
+    "label": "Riverside Drive viaduct",
+    "kind": "bridge",
+    "at": [
+     40.82412,
+     -73.9563
+    ],
+    "deckZ": [
+     2.37,
+     15.48
+    ],
+    "groundZ": 3.0,
+    "clearanceM": [
+     10.9,
+     12.4
+    ],
+    "zSource": "elevation-points",
+    "elevationPoints": 19
+   },
+   {
+    "label": "Riverside Drive viaduct",
+    "kind": "bridge",
+    "at": [
+     40.81895,
+     -73.95956
+    ],
+    "deckZ": [
+     23.5,
+     28.67
+    ],
+    "groundZ": 3.56,
+    "clearanceM": [
+     21.8,
+     24.2
+    ],
+    "zSource": "elevation-points",
+    "elevationPoints": 10
+   },
+   {
+    "label": "IRT 125th St station",
+    "kind": "elevated-station",
+    "at": [
+     40.81552,
+     -73.95834
+    ],
+    "deckZ": [
+     24.16,
+     24.27
+    ],
+    "groundZ": 9.37,
+    "clearanceM": [
+     14.8,
+     16.0
+    ],
+    "zSource": "elevation-points",
+    "elevationPoints": 4
+   },
+   {
+    "label": "IRT 125th St station",
+    "kind": "elevated-station",
+    "at": [
+     40.81547,
+     -73.95854
+    ],
+    "deckZ": [
+     24.16,
+     24.28
+    ],
+    "groundZ": 9.56,
+    "clearanceM": [
+     14.6,
+     15.9
+    ],
+    "zSource": "elevation-points",
+    "elevationPoints": 4
+   },
+   {
+    "label": "IRT 125th St station",
+    "kind": "elevated-station",
+    "at": [
+     40.81552,
+     -73.95827
+    ],
+    "deckZ": [
+     24.16,
+     24.18
+    ],
+    "groundZ": 9.37,
+    "clearanceM": [
+     14.8,
+     15.7
+    ],
+    "zSource": "elevation-points",
+    "elevationPoints": 3
+   },
+   {
+    "label": "IRT 125th St station",
+    "kind": "elevated-station",
+    "at": [
+     40.81563,
+     -73.9585
+    ],
+    "deckZ": [
+     24.16,
+     24.18
+    ],
+    "groundZ": 9.56,
+    "clearanceM": [
+     14.6,
+     15.6
+    ],
+    "zSource": "elevation-points",
+    "elevationPoints": 3
+   },
+   {
+    "label": "Amtrak portal at the ramp",
+    "kind": "tunnel-portal",
+    "at": [
+     40.81451,
+     -73.96418
+    ],
+    "groundZ": 11.96,
+    "dsmZ": 18.49,
+    "distanceFromRampM": 70.4
+   }
+  ],
+  "riversideParkTrees96to125": 2656,
+  "riversideParkMatched": 731,
+  "tallestTreeM": 51.26,
+  "treesOver35m": 11,
+  "grantsTomb": {
+   "bin": "1057391",
+   "roofZ": 86.6,
+   "groundZ": 40.06,
+   "heightM": 46.5,
+   "distanceM": 3.0
+  },
+  "piers": 7,
+  "seawalls": 4
+ },
+ "fileBytes": {
+  "buildings-missing.json": 10052,
+  "buildings.f32": 17263692,
+  "buildings.json": 645544,
+  "chm.f32": 43360960,
+  "chm.json": 731,
+  "chm.png": 1944937,
+  "decks.json": 182600,
+  "piers.json": 28048,
+  "scan.json": 15970,
+  "scan.log": 20526,
+  "trees.json": 1392403,
+  "tiles/": 114251027
+ },
+ "sources": {
+  "lidar": "ftp://ftp.gis.ny.gov/elevation/LIDAR/NYC_2021/",
+  "lidarIndex": "https://elevation.its.ny.gov/arcgis/rest/services/indexes/Historic_LiDAR_Collections/FeatureServer/0 (NYC 2021)",
+  "buildings": {
+   "url": "https://s-media.nyc.gov/agencies/oti/DA_WISE_GML.zip",
+   "dataset": "tnru-abg2",
+   "zipBytes": 916369666,
+   "lastModified": "Thu, 01 Dec 2022 18:35:16 GMT",
+   "member": "DA_WISE_GMLs/DA13_3D_Buildings_Merged.gml",
+   "compressedBytes": 44197658,
+   "xmlBytes": 618444705
+  },
+  "footprints": {
+   "dataset": "5zhs-2jue",
+   "url": "https://data.cityofnewyork.us/resource/5zhs-2jue.geojson"
+  },
+  "trees": {
+   "dataset": "hn5i-inap",
+   "url": "https://data.cityofnewyork.us/resource/hn5i-inap.geojson"
+  },
+  "transport": {
+   "dataset": "r9cu-9r7b",
+   "url": "https://data.cityofnewyork.us/resource/r9cu-9r7b.geojson"
+  },
+  "railroad": {
+   "dataset": "dwer-xbgx",
+   "url": "https://data.cityofnewyork.us/resource/dwer-xbgx.geojson"
+  },
+  "elevation": {
+   "dataset": "9uxf-ng6q",
+   "url": "https://data.cityofnewyork.us/resource/9uxf-ng6q.geojson"
+  },
+  "hydro": {
+   "dataset": "6hbv-tek4",
+   "url": "https://data.cityofnewyork.us/resource/6hbv-tek4.geojson"
+  },
+  "dcm": {
+   "dataset": "usmc-hn5p",
+   "url": "https://data.cityofnewyork.us/resource/usmc-hn5p.geojson"
+  },
+  "parks": {
+   "dataset": "enfh-gkve",
+   "url": "https://data.cityofnewyork.us/resource/enfh-gkve.geojson"
+  }
+ },
+ "conversions": {
+  "horizontal": "EPSG:2263 numbers read as EPSG:6539 (NAD83(2011) / NY Long Island, US ft, the LAS header's CRS) -> EPSG:9057 WGS 84 (G2139) with pyproj (about 0.9 m north, 0.1 m west of the NAD83 position) -> local metres: x = (lon - lon0)\u00b7111320\u00b7cos(lat0), y = (lat - lat0)\u00b7111320; LiDAR tiles use a quadratic fit to pyproj per tile (checked to 1 cm)",
+  "vertical": "NAVD88 US ft \u00d7 1200/3937 = NAVD88 m (GEOID18 per the vendor report); same datum as 3DEP",
+  "usSurveyFootM": 0.3048006096012192,
+  "lidarScale": "LAS scale \u00d7 X/Y/Z + offset, in US ft"
+ },
+ "notes": [
+  "DTM = class-2 mean per 0.5 m cell, class-9 water mean where no ground, gaps filled from the nearest measured cell then smoothed",
+  "CHM = class-5 max - DTM where 3x3 class-5 count >= 3, not on roofs",
+  "crowns: Gaussian sigma 1 cell, local maxima within a Popescu-Wynne window (min 3 m), watershed over CHM > 2 m, radius = sqrt(area/pi) >= 1 m and >= height/12",
+  "canopy masked by NYC footprints and LOD2 footprints widened 1 m"
+ ]
+}
