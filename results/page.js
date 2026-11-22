@@ -1,7 +1,7 @@
 // Draw the three charts from the live submissions and keep them fresh.
 // Every name, colour and number drawn comes from the live data or from park.json (the app's own files).
 import { build, bubbleOpacity, pageOf, voteText, where } from "./model.js";
-import { layoutLine } from "./layout.js";
+import { layoutLine, station } from "./layout.js";
 
 const REFRESH_S = 15;
 const API = "https://exit12n-api-katze52zaq-uc.a.run.app/api/submissions";
@@ -84,33 +84,49 @@ function drawLine(model, park, width) {
 
   // every bubble near its own distance along the exit, resting on the bands, none overlapping (layout.js)
   const bubble = (c, opacity, tip, kind) =>
-    `<circle class="bubble" data-kind="${kind}" cx="${c.cx.toFixed(2)}" cy="${c.cy.toFixed(2)}" r="${c.r.toFixed(2)}" fill="${c.o.color}" fill-opacity="${opacity.toFixed(2)}" stroke="${c.o.color}" stroke-width="1.2" data-net="${c.o.net ?? ""}" data-home="${c.home.toFixed(2)}"/>` +
+    `<circle class="bubble" data-kind="${kind}" data-members="${c.o.members?.length ?? 1}" cx="${c.cx.toFixed(2)}" cy="${c.cy.toFixed(2)}" r="${c.r.toFixed(2)}" fill="${c.o.color}" fill-opacity="${opacity.toFixed(2)}" stroke="${c.o.color}" stroke-width="1.2" data-net="${c.o.net ?? ""}" data-home="${c.home.toFixed(2)}"/>` +
+    // a merged bubble wears its count at its upper right, as the editor's pins do
+    (c.o.members?.length > 1 ? `<text class="count" x="${(c.cx + c.r * 0.72 + 1).toFixed(1)}" y="${(c.cy - c.r * 0.72 + 3).toFixed(1)}" font-size="11.5" fill="${INK}" stroke="${PAPER}" stroke-width="3" paint-order="stroke" pointer-events="none">${c.o.members.length}</text>` : "") +
     `<circle cx="${c.cx.toFixed(1)}" cy="${c.cy.toFixed(1)}" r="${Math.max(c.r, 9).toFixed(1)}" fill="transparent" data-tip="${esc(tip)}"/>`;
   for (const c of L.there) parts.push(bubble(c, 0.85, cap(c.o.name), "there"));
-  // a proposed thing is more opaque the more net votes it has; one outside the park looks like any other
-  for (const c of L.proposed) parts.push(bubble(c, bubbleOpacity(c.o.net, ob.mostNet), tipOf(c.o.name, votes(c.o.for, c.o.against), c.o.inPark ? "" : "outside the park's outline"), "proposed"));
+  // a proposed thing, or a few merged, is more opaque the more net votes it has
+  for (const c of L.proposed) parts.push(bubble(c, bubbleOpacity(c.o.net, L.mostNet), tipOf(c.o.name, votes(c.o.for, c.o.against)), "proposed"));
 
   // stop names, on as many rows as they need
   const rows = [];
   const stops = park.stops.map((p) => {
-    const w = textW(p.name, 13) * 1.1; // a little spare, so a name at either end is never cut
+    const at = station(p.s); // each stop's station, small and grey after its name
+    const w = (textW(p.name, 13) + textW(` ${at}`, 11.5)) * 1.1; // a little spare, so a name at either end is never cut
     const cx = Math.max(w / 2 + 2, Math.min(W - w / 2 - 2, x(p.s)));
     let row = rows.findIndex((ends) => ends < cx - w / 2 - 8);
     if (row < 0) row = rows.push(0) - 1;
     rows[row] = cx + w / 2;
-    return { ...p, cx, row };
+    return { ...p, cx, row, at };
   });
   const STOP_ROW = 17;
   const top = rows.length * STOP_ROW + 10;
   const highest = Math.min(...L.today.edge, ...L.there.map((c) => c.cy - c.r));
   const lowest = Math.max(...L.after.edge, ...L.proposed.map((c) => c.cy + c.r));
   const Y0 = Math.ceil(top - highest + 6);
-  const H = Math.ceil(Y0 + lowest + 12);
+  // the X axis, in metres along the exit, runs under everything, clear of the stop names at the top
+  const AXIS_Y = Math.ceil(Y0 + lowest + 16);
+  const H = AXIS_Y + 30;
+  const tick = (cls, x1, y1, x2, y2) => `<line class="${cls}" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${FAINT}" stroke-width="1"/>`;
+  const xAxis = tick("axis", X0, AXIS_Y, X1, AXIS_Y) + L.axes.x.map((k, i) =>
+    tick("axis", k.x, AXIS_Y, k.x, AXIS_Y + 5) +
+    `<text class="xtick" data-m="${k.s}" x="${k.x.toFixed(1)}" y="${AXIS_Y + 19}" text-anchor="${i === 0 ? "start" : i === L.axes.x.length - 1 ? "end" : "middle"}" font-size="12" fill="${FAINT}">${k.label}</text>`).join("");
+  // the Y axis, in metres across the park out from the line, spans the bands only (the bubbles are stacked, not measured)
+  const YX = X0 - 7;
+  const yAxis = L.axes.y.length
+    ? tick("axis", YX, Y0 - GAP - L.half, YX, Y0 - GAP) + tick("axis", YX, Y0 + GAP, YX, Y0 + GAP + L.half) + L.axes.y.map((k) =>
+      tick("axis", YX - 4, Y0 + k.y, YX, Y0 + k.y) +
+      `<text class="ytick" data-m="${k.m}" x="${YX - 7}" y="${(Y0 + k.y + 4).toFixed(1)}" text-anchor="end" font-size="12" fill="${FAINT}">${k.label}</text>`).join("")
+    : "";
 
   const stopMarks = stops.map((p) => {
     const ly = 13 + p.row * STOP_ROW;
     return `<line x1="${x(p.s).toFixed(1)}" y1="${ly + 5}" x2="${x(p.s).toFixed(1)}" y2="${Y0}" stroke="${INK}" stroke-opacity="0.3" stroke-width="1"/>` +
-      `<text x="${p.cx.toFixed(1)}" y="${ly}" text-anchor="middle" font-size="13" fill="${INK}" stroke="${PAPER}" stroke-width="3" paint-order="stroke">${esc(p.name)}</text>` +
+      `<text x="${p.cx.toFixed(1)}" y="${ly}" text-anchor="middle" font-size="13" fill="${INK}" stroke="${PAPER}" stroke-width="3" paint-order="stroke">${esc(p.name)}<tspan class="at" font-size="11.5" fill="${FAINT}" dx="5">${p.at}</tspan></text>` +
       `<circle cx="${x(p.s).toFixed(1)}" cy="${Y0}" r="6" fill="${PAPER}" stroke="${INK}" stroke-width="2.5"/>`;
   }).join("");
   const side = (y, t) => `<text x="${narrow ? X0 + 4 : 0}" y="${y}" font-size="14" fill="${INK}" class="caps" stroke="${PAPER}" stroke-width="3" paint-order="stroke">${t}</text>`;
@@ -118,7 +134,7 @@ function drawLine(model, park, width) {
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="The exit as a line with its stops. Above it, the park's width today by land cover; below it, the same width with the shown proposals laid over it; each proposed thing is a bubble near its distance along the exit.">
     <defs>${patterns()}</defs><g transform="translate(0 ${Y0})">${parts.join("")}</g>
     <line x1="${X0}" y1="${Y0}" x2="${X1}" y2="${Y0}" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>
-    ${stopMarks}${side(Y0 - GAP - 8, "Today")}${side(Y0 + GAP + 16, "Proposed")}</svg>`;
+    ${xAxis}${yAxis}${stopMarks}${side(Y0 - GAP - 8, "Today")}${side(Y0 + GAP + 16, "Proposed")}</svg>`;
 }
 
 function lineKey(model) {
