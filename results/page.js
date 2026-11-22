@@ -1,6 +1,6 @@
 // Draw the three charts from the live submissions and keep them fresh.
 // Every name, colour and number drawn comes from the live data or from park.json (the app's own files).
-import { build, bubbleOpacity, pageOf, voteText, where } from "./model.js";
+import { build, bubbleOpacity, pageOf, streamOpacity, voteText, where } from "./model.js";
 import { layoutLine, station } from "./layout.js";
 
 const REFRESH_S = 15;
@@ -55,7 +55,9 @@ function drawLine(model, park, width) {
     // a stream of several same-name proposals reads like a merged bubble: "3 proposals, Boardwalk", then the votes added
     const named = s.count > 1 ? `${s.count} proposals, ${s.label}` : s.label;
     const tip = s.kind === "cover" ? cap(s.label) : s.kind === "removal" ? tipOf(`${named}: this ground turns to grass`, votes(s.for, s.against)) : tipOf(named, votes(s.for, s.against));
-    parts.push(`<path d="${d}" fill="${s.color ?? UNCLASSED}" stroke="${PAPER}" stroke-width="0.8" data-tip="${esc(tip)}"/>` +
+    // below the line a stream is more opaque the more net votes it has, like a bubble; the land cover above is solid
+    const op = s.kind === "cover" ? "" : ` fill-opacity="${streamOpacity(s, model.streams.below ?? []).toFixed(2)}"`;
+    parts.push(`<path d="${d}" fill="${s.color ?? UNCLASSED}"${op} stroke="${PAPER}" stroke-width="0.8" data-tip="${esc(tip)}"/>` +
       (s.kind === "cover" ? `<path d="${d}" fill="url(#tx-${s.key})" pointer-events="none"/>` : ""));
   }
 

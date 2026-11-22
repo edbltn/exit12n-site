@@ -165,6 +165,14 @@ export function bubbleOpacity(net, mostNet) {
   return BUBBLE_MIN_OPACITY + (1 - BUBBLE_MIN_OPACITY) * ((Math.min(net, mostNet) - 1) / (mostNet - 1));
 }
 
+/** How opaque a proposed stream is below the line (Eric, 2026-11-22 12:01: "more votes means more opaque, fewer votes
+ *  means fainter, so the most supported proposals stand out. Keep even the least-voted ones visible"): the bubbles'
+ *  rule, by net votes (for minus against), against the most supported of the streams shown. */
+export function streamOpacity(stream, streams) {
+  const mostNet = Math.max(0, ...streams.map((x) => x.for - x.against));
+  return bubbleOpacity(stream.for - stream.against, mostNet);
+}
+
 /** One page of a ranked list: its rows with their ranks, and where it stands. A page past the end is the last. */
 export const PAGE_SIZE = 10;
 export function pageOf(list, page, size = PAGE_SIZE) {
