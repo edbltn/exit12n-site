@@ -99,10 +99,11 @@ function drawLine(model, park, width) {
     const base = String(c.o.name).replace(/^\d+ proposals, /, "");
     const name = c.o.members?.length > 1 ? `${base} ×${c.o.members.length}` : base;
     const text = name.length > 26 ? `${name.slice(0, 25)}…` : name;
-    const edge = c.cx < X0 + 70; // a bubble at the line's start: the name runs right from its edge, clear of the side axis
-    return `<text class="label" x="${(edge ? c.cx - c.r : c.cx).toFixed(1)}" y="${(c.cy + c.r + 13).toFixed(1)}" text-anchor="${edge ? "start" : "middle"}" font-size="12.5" fill="${INK}" stroke="${PAPER}" stroke-width="3" paint-order="stroke" pointer-events="none">${esc(text)}</text>`;
+    const left = c.cx < X0 + 70; // a bubble at the line's start: the name runs right from its edge, clear of the side axis
+    const right = c.cx > X1 - 70; // and at the far end it runs left, so it is never cut
+    return `<text class="label" x="${(left ? c.cx - c.r : right ? c.cx + c.r : c.cx).toFixed(1)}" y="${(c.cy + c.r + 13).toFixed(1)}" text-anchor="${left ? "start" : right ? "end" : "middle"}" font-size="12.5" fill="${INK}" stroke="${PAPER}" stroke-width="3" paint-order="stroke" pointer-events="none">${esc(text)}</text>`;
   };
-  const labelled = L.proposed.length <= LABELLED;
+  const labelled = L.proposed.length <= (narrow ? 4 : LABELLED); // on a phone the names would collide: the tap names them
   for (const c of L.there) parts.push(bubble(c, 0.85, cap(c.o.name), "there"));
   // a proposed thing, or a few merged, is more opaque the more net votes it has
   for (const c of L.proposed) parts.push(bubble(c, bubbleOpacity(c.o.net, L.mostNet), tipOf(c.o.name, votes(c.o.for, c.o.against)), "proposed") + (labelled ? named(c) : ""));
