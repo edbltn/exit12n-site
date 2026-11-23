@@ -1,6 +1,14 @@
 // Where everything in the line chart sits, for a chart `width` pixels wide. No DOM here, so
 // `node model.test.mjs` can check that no two bubbles overlap and that each stays near its place.
 
+/** How far below the Proposed bands the bubbles may reach, in pixels: the room the chart gives them. The circles are drawn
+ *  as large as this allows (Eric via coding-shepherd, 2026-11-23: "as large as the layout allows at phone width without
+ *  overlap"), all enlarged by the same factor so their areas stay in proportion to their footprints. */
+export const BUBBLE_ZONE = (narrow) => (narrow ? 170 : 220);
+/** The factors tried, largest first, and the smallest circle drawn, in pixels. */
+export const K_STEPS = [8, 6, 5, 4, 3, 2.5, 2, 1.5, 1];
+export const MIN_R = (narrow) => (narrow ? 8 : 10);
+
 /** The gap kept between any two bubbles, in pixels. */
 export const BUBBLE_PAD = 1.5;
 /** How far a bubble may be moved sideways from its own distance along the exit to make room, in pixels: not at
@@ -149,7 +157,6 @@ export function layoutLine(model, park, width) {
   const tallest = Math.max(0, ...Array.from({ length: m.bins }, (_, b) => below.reduce((t, s) => t + s.width[b], 0)));
   const rangeBelow = BELOW_RANGES.find((r) => r >= tallest) ?? Math.ceil(tallest / 50) * 50;
   const PXMB = HALF / rangeBelow;
-  const R = (a) => Math.max(3, PXM * Math.sqrt(a / Math.PI));
   const GAP = 8;
 
   /** Stack bands outward from the line: each band's near and far edge at every section, and the outer edge. */
@@ -172,7 +179,7 @@ export function layoutLine(model, park, width) {
     const t = Math.max(0, Math.min(1, f - b));
     return edge[b] + (edge[Math.min(m.bins - 1, b + 1)] - edge[b]) * t;
   };
-  const settle = (list, edge, dir) => {
+  const settle = (list, edge, dir, R = (a) => Math.max(3, PXM * Math.sqrt(a / Math.PI))) => {
     const at = edgeAt(edge);
     // a bubble starts clear of the bands across its whole width, so it never covers them
     const clear = (px, r) => {
@@ -183,14 +190,32 @@ export function layoutLine(model, park, width) {
       return dir * (Math.max(far, dir * at(px + r)) + r + 3);
     };
     const circles = list.map((o) => ({ x: x(o.s), r: R(o.areaM2) }));
-    return beeswarm(circles, clear, dir, 0, W).map((c) => ({ o: list[c.i], cx: c.x, cy: c.y, r: c.r, home: x(list[c.i].s) }));
+    // on a wide chart the side axis fills the margin left of X0: no circle is set over it
+    return beeswarm(circles, clear, dir, narrow ? 0 : X0 - 8, W).map((c) => ({ o: list[c.i], cx: c.x, cy: c.y, r: c.r, home: x(list[c.i].s) }));
   };
   // nearby proposed things of the same name merge before they are laid out
   const merged = mergeBubbles(ob.proposed, MERGE_M(park));
+  // the proposed things are drawn as large as the zone below the bands allows: the largest factor that fits
+  const edgeMax = Math.max(0, ...after.edge);
+  const tryK = (k) => {
+    const laid = settle(merged, after.edge, 1, (a) => Math.max(MIN_R(narrow), k * PXM * Math.sqrt(a / Math.PI)));
+    return { laid, bottom: Math.max(edgeMax, ...laid.map((c) => c.cy + c.r)) };
+  };
+  let k = 1;
+  let proposed = null;
+  for (const step of K_STEPS) {
+    const t = tryK(step);
+    if (t.bottom - edgeMax <= BUBBLE_ZONE(narrow) || step === 1) {
+      k = step;
+      proposed = t.laid;
+      break;
+    }
+  }
   return {
+    k, kMax: K_STEPS[0], kSteps: K_STEPS, tryK,
     W, narrow, X0, X1, PXM, PXMB, GAP, x, xb, today, after,
     there: settle(ob.there, today.edge, -1),
-    proposed: settle(merged, after.edge, 1),
+    proposed,
     mostNet: Math.max(1, ...merged.map((o) => o.net)),
     axes: axisTicks(m.length, st.widthMax, x, PXM, GAP, narrow, rangeBelow, PXMB),
     half: HALF, rangeBelow,

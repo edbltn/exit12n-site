@@ -457,6 +457,16 @@ export function themes(items, park) {
     .sort((a, b) => b.people - a.people || b.items.length - a.items.length || a.label.localeCompare(b.label));
 }
 
+/** The themes' lead: the family with the most people behind it and the one with the most drawings, said once when they are one. */
+export function themesLead(list) {
+  const first = list[0]; // already ordered: most people first
+  if (!first) return "Nothing drawn yet.";
+  const most = [...list].sort((a, b) => b.items.length - a.items.length)[0];
+  return most === first || most.items.length === first.items.length
+    ? `${first.label} leads, with ${first.people} ${first.people === 1 ? "person" : "people"} and ${first.items.length} ${first.items.length === 1 ? "drawing" : "drawings"}.`
+    : `Most people: ${first.label} (${first.people}). Most drawings: ${most.label} (${most.items.length}).`;
+}
+
 /** A stretch in words: its metres along the ramp and the nearest stops the app's data names. */
 export function where(g, park) {
   if (!g.on) return "off the ramp";

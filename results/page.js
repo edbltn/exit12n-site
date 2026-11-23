@@ -1,6 +1,6 @@
 // Draw the three charts from the live submissions and keep them fresh.
 // Every name, colour and number drawn comes from the live data or from park.json (the app's own files).
-import { build, bubbleOpacity, forPersonas, nextPersona, pageOf, parsePersonaHash, personaHash, streamOpacity, voteText, where } from "./model.js";
+import { build, bubbleOpacity, forPersonas, nextPersona, pageOf, parsePersonaHash, personaHash, streamOpacity, themesLead, voteText, where } from "./model.js";
 import { layoutLine, station } from "./layout.js";
 
 const REFRESH_S = 15;
@@ -95,10 +95,13 @@ function drawLine(model, park, width) {
   // with few bubbles on show (one persona at a time), each is named right on the page, under its circle (workshop 11/22:
   // "labels written directly on them"); with many, the hover does it
   const LABELLED = 14;
-  const named = (c) => {
+  const named = (c, fits) => {
     const base = String(c.o.name).replace(/^\d+ proposals, /, "");
     const name = c.o.members?.length > 1 ? `${base} ×${c.o.members.length}` : base;
     const text = name.length > 26 ? `${name.slice(0, 25)}…` : name;
+    // a name that fits across its circle is written on it; any other sits under it (never on a phone with many)
+    if (textW(text, 12.5) <= 2 * c.r - 6) return `<text class="label in" x="${c.cx.toFixed(1)}" y="${(c.cy + 4).toFixed(1)}" text-anchor="middle" font-size="12.5" fill="${INK}" pointer-events="none">${esc(text)}</text>`;
+    if (!fits) return "";
     const left = c.cx < X0 + 70; // a bubble at the line's start: the name runs right from its edge, clear of the side axis
     const right = c.cx > X1 - 70; // and at the far end it runs left, so it is never cut
     return `<text class="label" x="${(left ? c.cx - c.r : right ? c.cx + c.r : c.cx).toFixed(1)}" y="${(c.cy + c.r + 13).toFixed(1)}" text-anchor="${left ? "start" : right ? "end" : "middle"}" font-size="12.5" fill="${INK}" stroke="${PAPER}" stroke-width="3" paint-order="stroke" pointer-events="none">${esc(text)}</text>`;
@@ -106,7 +109,7 @@ function drawLine(model, park, width) {
   const labelled = L.proposed.length <= (narrow ? 4 : LABELLED); // on a phone the names would collide: the tap names them
   for (const c of L.there) parts.push(bubble(c, 0.85, cap(c.o.name), "there"));
   // a proposed thing, or a few merged, is more opaque the more net votes it has
-  for (const c of L.proposed) parts.push(bubble(c, bubbleOpacity(c.o.net, L.mostNet), tipOf(c.o.name, votes(c.o.for, c.o.against)), "proposed") + (labelled ? named(c) : ""));
+  for (const c of L.proposed) parts.push(bubble(c, bubbleOpacity(c.o.net, L.mostNet), tipOf(c.o.name, votes(c.o.for, c.o.against)), "proposed") + named(c, labelled));
 
   // stop names, on as many rows as they need
   const rows = [];
@@ -293,32 +296,30 @@ function render(subs) {
   const who = forWords();
   $("title").textContent = view ? (who ? `Exit 12N: what the map says for ${who}` : "Exit 12N: no one chosen") : "Exit 12N: what the map says so far";
   $("counts").textContent = view
-    ? (who ? `${c.drawings} of the ${c.allDrawings} drawings are for ${who}, with ${c.votes} votes from ${people(c.people)}` : `${c.allDrawings} drawings on the map`)
+    ? (who ? `${c.drawings} of ${c.allDrawings} drawings, from ${people(c.people)}` : `${c.allDrawings} drawings`)
     : `${c.drawings} drawings and ${c.votes} votes from ${people(c.people)}`;
   drawPersonas(subs);
 
-  const gives = [...st.today].filter((s) => s.givesM2 > 0).sort((a, b) => b.givesM2 - a.givesM2);
   const paths = st.proposed.length;
   const ob = model.objects;
-  $("line-lead").textContent = view && !ob.proposed.length && !st.proposed.length && !st.removals.length
-    ? `Along the exit's ${Math.round(model.m.length)} m the park is ${st.widthMin} to ${st.widthMax} m wide, ${m2(st.parkAreaM2)} in all. ${who ? `Nothing for ${who} is on the line yet.` : "Choose a persona above to see what the map says for them."}`
-    : `Along the exit's ${Math.round(model.m.length)} m the park is ${st.widthMin} to ${st.widthMax} m wide, ${m2(st.parkAreaM2)} in all. ` +
-    (st.takenM2 > 0
-      ? `The ${paths} proposed ${paths === 1 ? "path" : "paths"} shown would take ${m2(st.takenM2)} of it: ${gives.map((s) => `${m2(s.givesM2)} of ${s.label}`).join(", ")}. The ${ob.proposed.length} proposed things are bubbles and take none.`
-      : `No proposed path is shown yet. The ${ob.proposed.length} proposed things are bubbles and take no ground.`) +
-    (st.removals.length ? ` The ${st.removals.length} ${st.removals.length === 1 ? "removal" : "removals"} shown would turn ${m2(st.turnedToGrassM2)} to grass.` : "");
+  const parts = [
+    paths ? `${paths} proposed ${paths === 1 ? "path" : "paths"} would take ${m2(st.takenM2)} of the park's ${m2(st.parkAreaM2)}` : "",
+    ob.proposed.length ? `${ob.proposed.length} proposed ${ob.proposed.length === 1 ? "thing" : "things"}` : "",
+    st.removals.length ? `${st.removals.length} ${st.removals.length === 1 ? "removal turns" : "removals turn"} ${m2(st.turnedToGrassM2)} to grass` : "",
+  ].filter(Boolean);
+  $("line-lead").textContent = parts.length ? `${cap(parts.join("; "))}.` : who ? `Nothing for ${who} is on the line yet.` : "Choose a persona above to see what the map says for them.";
   $("line").innerHTML = drawLine(model, park, $("line").clientWidth || 360);
   $("line-key").innerHTML = lineKey(model);
   $("line-shown").textContent =
     (model.chosen.standIn
       ? "Shown: every proposal with more people for it than against. "
-      : `Shown: the final map's top proposals (exit12n.org/final)${model.chosen.via === "snapshot" && model.chosen.at ? `, as of ${new Date(model.chosen.at).toLocaleString()}` : ""}, with its counts of votes. `) +
-    (ob.outside ? `${ob.outside} of the ${ob.proposed.length} things shown stand outside the park's outline: they are on the line by their distance along the exit all the same.` : "");
+      : `Shown: the final map's top proposals${model.chosen.via === "snapshot" && model.chosen.at ? `, as of ${new Date(model.chosen.at).toLocaleString()}` : ""}. `) +
+    (ob.outside ? `${ob.outside} of ${ob.proposed.length} things stand outside the park, placed by their distance along the exit.` : "");
 
   const lead = model.ranked.slice(0, 3).map((g) => g.name);
   const contested = model.ranked.filter((g) => g.against > 0).length;
   $("shortlist-lead").textContent = lead.length
-    ? `Out front: ${lead.join(", ")}. ${contested} of the ${c.proposals} proposals have someone against them.`
+    ? `Out front: ${lead.join(", ")}.${contested ? ` ${contested} of ${c.proposals} have someone against.` : ""}`
     : who ? `No one has drawn anything yet that is for ${who}.` : "Choose a persona above to see what the map says for them.";
   const page = pageOf(model.ranked, shortPage);
   shortPage = page.page; // a list that got shorter leaves the reader on its last page
@@ -328,12 +329,9 @@ function render(subs) {
   $("page-next").disabled = page.page >= page.pages - 1;
 
   const first = model.themes[0];
-  const most = [...model.themes].sort((a, b) => b.items.length - a.items.length)[0];
-  $("themes-lead").textContent = first ? `${first.label} has the most people behind it (${first.people}); ${most.label} has the most drawings (${most.items.length}).` : "Nothing drawn yet.";
+  $("themes-lead").textContent = themesLead(model.themes);
   $("themes").innerHTML = first ? drawThemes(model, park, W) : "";
-  $("rules").textContent =
-    `Drawings of the same thing within ${park.config.reachM} m of each other along the ramp are one proposal, counted by the people for it, not by the drawings. ` +
-    `Dark means ${park.config.winSupport} or more people for it than against, the app's own bar; light means one.`;
+  $("rules").textContent = `Drawings of the same thing within ${park.config.reachM} m along the ramp are one proposal.`;
 }
 
 let refreshing = false; // one rebuild at a time: a check that finds the last one still running is skipped (Eric, 2026-11-22 14:40)
