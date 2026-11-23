@@ -92,9 +92,20 @@ function drawLine(model, park, width) {
     // a merged bubble wears its count at its upper right, as the editor's pins do
     (c.o.members?.length > 1 ? `<text class="count" x="${(c.cx + c.r * 0.72 + 1).toFixed(1)}" y="${(c.cy - c.r * 0.72 + 3).toFixed(1)}" font-size="11.5" fill="${INK}" stroke="${PAPER}" stroke-width="3" paint-order="stroke" pointer-events="none">${c.o.members.length}</text>` : "") +
     `<circle cx="${c.cx.toFixed(1)}" cy="${c.cy.toFixed(1)}" r="${Math.max(c.r, 9).toFixed(1)}" fill="transparent" data-tip="${esc(tip)}"/>`;
+  // with few bubbles on show (one persona at a time), each is named right on the page, under its circle (workshop 11/22:
+  // "labels written directly on them"); with many, the hover does it
+  const LABELLED = 14;
+  const named = (c) => {
+    const base = String(c.o.name).replace(/^\d+ proposals, /, "");
+    const name = c.o.members?.length > 1 ? `${base} ×${c.o.members.length}` : base;
+    const text = name.length > 26 ? `${name.slice(0, 25)}…` : name;
+    const edge = c.cx < X0 + 70; // a bubble at the line's start: the name runs right from its edge, clear of the side axis
+    return `<text class="label" x="${(edge ? c.cx - c.r : c.cx).toFixed(1)}" y="${(c.cy + c.r + 13).toFixed(1)}" text-anchor="${edge ? "start" : "middle"}" font-size="12.5" fill="${INK}" stroke="${PAPER}" stroke-width="3" paint-order="stroke" pointer-events="none">${esc(text)}</text>`;
+  };
+  const labelled = L.proposed.length <= LABELLED;
   for (const c of L.there) parts.push(bubble(c, 0.85, cap(c.o.name), "there"));
   // a proposed thing, or a few merged, is more opaque the more net votes it has
-  for (const c of L.proposed) parts.push(bubble(c, bubbleOpacity(c.o.net, L.mostNet), tipOf(c.o.name, votes(c.o.for, c.o.against)), "proposed"));
+  for (const c of L.proposed) parts.push(bubble(c, bubbleOpacity(c.o.net, L.mostNet), tipOf(c.o.name, votes(c.o.for, c.o.against)), "proposed") + (labelled ? named(c) : ""));
 
   // stop names, on as many rows as they need
   const rows = [];
@@ -110,7 +121,7 @@ function drawLine(model, park, width) {
   const STOP_ROW = 17;
   const top = rows.length * STOP_ROW + 10;
   const highest = Math.min(...L.today.edge, ...L.there.map((c) => c.cy - c.r));
-  const lowest = Math.max(...L.after.edge, ...L.proposed.map((c) => c.cy + c.r));
+  const lowest = Math.max(...L.after.edge, ...L.proposed.map((c) => c.cy + c.r + (labelled ? 16 : 0)));
   const Y0 = Math.ceil(top - highest + 6);
   // the X axis, in metres along the exit, runs under everything, clear of the stop names at the top
   const AXIS_Y = Math.ceil(Y0 + lowest + 16);
