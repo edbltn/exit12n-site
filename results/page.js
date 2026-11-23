@@ -1,6 +1,6 @@
 // Draw the three charts from the live submissions and keep them fresh.
 // Every name, colour and number drawn comes from the live data or from park.json (the app's own files).
-import { build, bubbleOpacity, pageOf, streamOpacity, voteText, where } from "./model.js";
+import { build, bubbleOpacity, forPersonas, nextPersona, pageOf, parsePersonaHash, personaHash, streamOpacity, voteText, where } from "./model.js";
 import { layoutLine, station } from "./layout.js";
 
 const REFRESH_S = 15;
@@ -239,6 +239,9 @@ let source = 0;
 let finalMap = null; // the final map's module, once it has loaded
 let selection = null; // its answer: { rows, via, at }, or null while the stand-in shows
 let finalTried = 0;
+let groups = []; // the persona groups, the menu's top level
+let personas = []; // personas.json: who the page can be read for
+let enabled = []; // the ids of the personas on, kept in the address (#for=...)
 let shortPage = 0; // the page of the shortlist the reader is on; kept through every refresh
 
 /** Ask the final map which proposals it shows: its own function first, its snapshot second, else nothing. */
@@ -263,25 +266,38 @@ async function askFinalMap() {
   return null;
 }
 
+/** The personas on, in words: "Dog walker", "Dog walker and Climber", "3 personas", or nothing. */
+function forWords() {
+  const names = personas.filter((p) => enabled.includes(p.id)).map((p) => p.name);
+  return names.length > 3 ? `${names.length} personas` : names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0] ?? "";
+}
+
 function render(subs) {
-  const model = build(subs, park, selection);
+  const view = personas.length ? { personas, enabled } : null;
+  const model = build(subs, park, selection, view);
   const st = model.streams;
   const c = model.counts;
   const W = $("shortlist").clientWidth || 360;
-  $("counts").textContent = `${c.drawings} drawings and ${c.votes} votes from ${people(c.people)}`;
+  const who = forWords();
+  $("title").textContent = view ? (who ? `Exit 12N: what the map says for ${who}` : "Exit 12N: no one chosen") : "Exit 12N: what the map says so far";
+  $("counts").textContent = view
+    ? (who ? `${c.drawings} of the ${c.allDrawings} drawings are for ${who}, with ${c.votes} votes from ${people(c.people)}` : `${c.allDrawings} drawings on the map`)
+    : `${c.drawings} drawings and ${c.votes} votes from ${people(c.people)}`;
+  drawPersonas(subs);
 
   const gives = [...st.today].filter((s) => s.givesM2 > 0).sort((a, b) => b.givesM2 - a.givesM2);
   const paths = st.proposed.length;
   const ob = model.objects;
-  $("line-lead").textContent =
-    `Along the exit's ${Math.round(model.m.length)} m the park is ${st.widthMin} to ${st.widthMax} m wide, ${m2(st.parkAreaM2)} in all. ` +
+  $("line-lead").textContent = view && !ob.proposed.length && !st.proposed.length && !st.removals.length
+    ? `Along the exit's ${Math.round(model.m.length)} m the park is ${st.widthMin} to ${st.widthMax} m wide, ${m2(st.parkAreaM2)} in all. ${who ? `Nothing for ${who} is on the line yet.` : "Choose a persona above to see what the map says for them."}`
+    : `Along the exit's ${Math.round(model.m.length)} m the park is ${st.widthMin} to ${st.widthMax} m wide, ${m2(st.parkAreaM2)} in all. ` +
     (st.takenM2 > 0
       ? `The ${paths} proposed ${paths === 1 ? "path" : "paths"} shown would take ${m2(st.takenM2)} of it: ${gives.map((s) => `${m2(s.givesM2)} of ${s.label}`).join(", ")}. The ${ob.proposed.length} proposed things are bubbles and take none.`
       : `No proposed path is shown yet. The ${ob.proposed.length} proposed things are bubbles and take no ground.`) +
     (st.removals.length ? ` The ${st.removals.length} ${st.removals.length === 1 ? "removal" : "removals"} shown would turn ${m2(st.turnedToGrassM2)} to grass.` : "");
   $("line").innerHTML = drawLine(model, park, $("line").clientWidth || 360);
   $("line-key").innerHTML = lineKey(model);
-  $("line-note").textContent =
+  $("line-shown").textContent =
     (model.chosen.standIn
       ? "Shown: every proposal with more people for it than against. "
       : `Shown: the final map's top proposals (exit12n.org/final)${model.chosen.via === "snapshot" && model.chosen.at ? `, as of ${new Date(model.chosen.at).toLocaleString()}` : ""}, with its counts of votes. `) +
@@ -289,18 +305,20 @@ function render(subs) {
 
   const lead = model.ranked.slice(0, 3).map((g) => g.name);
   const contested = model.ranked.filter((g) => g.against > 0).length;
-  $("shortlist-lead").textContent = `Out front: ${lead.join(", ")}. ${contested} of the ${c.proposals} proposals have someone against them.`;
+  $("shortlist-lead").textContent = lead.length
+    ? `Out front: ${lead.join(", ")}. ${contested} of the ${c.proposals} proposals have someone against them.`
+    : who ? `No one has drawn anything yet that is for ${who}.` : "Choose a persona above to see what the map says for them.";
   const page = pageOf(model.ranked, shortPage);
   shortPage = page.page; // a list that got shorter leaves the reader on its last page
-  $("shortlist").innerHTML = drawShortlist(model, park, W, page);
-  $("page-at").textContent = `${page.from} to ${page.to} of ${page.total}`;
+  $("shortlist").innerHTML = lead.length ? drawShortlist(model, park, W, page) : "";
+  $("page-at").textContent = lead.length ? `${page.from} to ${page.to} of ${page.total}` : "";
   $("page-prev").disabled = page.page === 0;
   $("page-next").disabled = page.page >= page.pages - 1;
 
   const first = model.themes[0];
   const most = [...model.themes].sort((a, b) => b.items.length - a.items.length)[0];
-  $("themes-lead").textContent = `${first.label} has the most people behind it (${first.people}); ${most.label} has the most drawings (${most.items.length}).`;
-  $("themes").innerHTML = drawThemes(model, park, W);
+  $("themes-lead").textContent = first ? `${first.label} has the most people behind it (${first.people}); ${most.label} has the most drawings (${most.items.length}).` : "Nothing drawn yet.";
+  $("themes").innerHTML = first ? drawThemes(model, park, W) : "";
   $("rules").textContent =
     `Drawings of the same thing within ${park.config.reachM} m of each other along the ramp are one proposal, counted by the people for it, not by the drawings. ` +
     `Dark means ${park.config.winSupport} or more people for it than against, the app's own bar; light means one.`;
@@ -386,10 +404,73 @@ function pager() {
   $("page-next").addEventListener("click", turn(1));
 }
 
+
+/** The picker and the toggles: switch to one persona, or turn each on or off. Every change goes to the address, so a
+ *  link keeps the view, and redraws from the data already in hand. */
+function drawPersonas(subs) {
+  const n = (p) => forPersonas(subs, personas, [p.id]).length; // drawings that serve each persona, for the reader to choose by
+  $("who").hidden = !personas.length;
+  if (!personas.length) return;
+  const select = $("persona");
+  const list = $("persona-list");
+  const byGroup = groups.map((g) => ({ ...g, members: personas.filter((p) => p.group === g.id) })).filter((g) => g.members.length);
+  // built once, a group at a time; after that only updated in place, so a toggle keeps the keyboard's place and a refresh does not disturb it
+  if (!list.querySelector("input")) {
+    select.innerHTML = `<option value="" id="persona-many"></option>` +
+      byGroup.map((g) => `<optgroup label="${esc(g.label)}">${g.members.map((p) => `<option value="${esc(p.id)}"></option>`).join("")}</optgroup>`).join("");
+    list.innerHTML = byGroup.map((g) => `<p class="g">${esc(g.label)}</p>` +
+      g.members.map((p) => `<label><input type="checkbox" value="${esc(p.id)}">${esc(p.name)} <span class="n"></span></label>`).join("")).join("");
+  }
+  const one = enabled.length === 1 ? enabled[0] : "";
+  const many = $("persona-many");
+  many.textContent = enabled.length ? `${enabled.length} personas` : "No one";
+  many.hidden = enabled.length === 1;
+  const byId = new Map(personas.map((p) => [p.id, p]));
+  for (const o of select.querySelectorAll("option[value]:not([value=''])")) o.textContent = `${byId.get(o.value).name} (${n(byId.get(o.value))})`;
+  for (const box of list.querySelectorAll("input")) {
+    box.checked = enabled.includes(box.value);
+    box.parentElement.querySelector(".n").textContent = n(byId.get(box.value));
+  }
+  select.value = one;
+  const on = personas.filter((p) => enabled.includes(p.id));
+  $("persona-who").textContent = on.length === 1 ? (on[0].who ?? on[0].description ?? "") : "";
+  if (enabled.length > 1) $("persona-several").open = true;
+}
+
+function setPersonas(ids) {
+  enabled = personas.filter((p) => ids.includes(p.id)).map((p) => p.id);
+  shortPage = 0;
+  history.replaceState(null, "", personaHash(enabled, personas));
+  if (lastSubs) render(lastSubs);
+}
+
+function personaControls() {
+  $("persona").addEventListener("change", (e) => setPersonas(e.target.value ? [e.target.value] : []));
+  $("persona-prev").addEventListener("click", () => setPersonas([nextPersona(enabled, personas, -1)]));
+  $("persona-next").addEventListener("click", () => setPersonas([nextPersona(enabled, personas, 1)]));
+  $("persona-list").addEventListener("change", (e) => {
+    const id = e.target.value;
+    setPersonas(e.target.checked ? [...enabled, id] : enabled.filter((x) => x !== id));
+  });
+  window.addEventListener("hashchange", () => {
+    enabled = parsePersonaHash(location.hash, personas);
+    if (lastSubs) render(lastSubs);
+  });
+}
+
 async function start() {
   park = await (await fetch("park.json")).json();
+  try {
+    const j = await (await fetch("personas.json")).json();
+    personas = (Array.isArray(j) ? j : j.personas ?? []).filter((p) => p?.id && Array.isArray(p.kinds));
+    groups = j.groups ?? [{ id: undefined, label: "Personas" }];
+  } catch {
+    personas = []; // no persona list: the page shows everything, as before
+  }
+  enabled = parsePersonaHash(location.hash, personas);
   labels();
   pager();
+  personaControls();
   await refresh();
   setInterval(refresh, REFRESH_S * 1000);
   let width = window.innerWidth;

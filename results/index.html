@@ -43,6 +43,23 @@ p .key:first-child { margin-left: 0; }
 .pager { display: flex; align-items: center; gap: 1.1rem; margin-top: 0.9rem; font-size: 1rem; color: var(--ink-soft); font-variant-numeric: lining-nums tabular-nums; }
 .pager button { font: inherit; color: var(--ink); background: none; border: 1px solid var(--hairline); border-radius: 3px; padding: 0.3rem 0.9rem; cursor: pointer; }
 .pager button:disabled { color: var(--ink-faint); opacity: 0.5; cursor: default; }
+.who { margin-top: 1.4rem; }
+.who label, .who summary { color: var(--ink-soft); }
+.who select, .who button { font: inherit; font-size: 1rem; color: var(--ink); background: var(--paper); border: 1px solid var(--hairline); border-radius: 3px; padding: 0.3rem 0.7rem; cursor: pointer; }
+.who select { max-width: 100%; }
+.who button { padding: 0.3rem 0.9rem; margin-left: 0.3rem; }
+.who select:focus-visible, .who button:focus-visible, .who summary:focus-visible, .who input:focus-visible { outline: 2px solid var(--sienna); outline-offset: 3px; }
+.who summary { cursor: pointer; margin-top: 0.8rem; width: fit-content; }
+#persona-list { columns: 3 15rem; column-gap: 1.6rem; margin-top: 0.6rem; font-size: 1rem; }
+#persona-list label { display: block; break-inside: avoid; padding: 0.15rem 0; cursor: pointer; color: var(--ink); }
+#persona-list input { accent-color: var(--sienna); margin-right: 0.5em; }
+#persona-list .g { color: var(--ink-faint); font-variant-caps: small-caps; letter-spacing: 0.05em; margin: 0.7rem 0 0.1rem; break-after: avoid; }
+#persona-list .g:first-child { margin-top: 0; }
+#persona-list .n { color: var(--ink-faint); }
+details.how { margin-top: 1rem; }
+details.how summary { cursor: pointer; color: var(--ink-soft); font-size: 0.95rem; width: fit-content; }
+details.how summary:focus-visible { outline: 2px solid var(--sienna); outline-offset: 3px; }
+.empty { color: var(--ink-soft); margin: 0.6rem 0; }
 #tip { position: absolute; z-index: 5; max-width: min(22rem, 90vw); background: var(--paper); border: 1px solid var(--hairline); padding: 0.4rem 0.6rem; font-size: 0.95rem; line-height: 1.35; pointer-events: none; }
 #tip strong { font-weight: 700; }
 @media (max-width: 720px) {
@@ -55,14 +72,21 @@ p .key:first-child { margin-left: 0; }
 <body>
 <main>
 <header><a href="https://sphericalharmonics.org" aria-label="Spherical Harmonics: the website"><img src="logo.png" alt="" width="44" height="44"><span>Spherical Harmonics</span></a></header>
-<h1>Exit 12N: what the map says so far</h1>
+<h1 id="title">Exit 12N: what the map says so far</h1>
 <p class="meta"><span id="counts">Reading the map</span>. <span id="status">Fetching the live data.</span></p>
+
+<div class="who" id="who" hidden>
+<p><label for="persona">Showing</label> <select id="persona"></select><button type="button" id="persona-prev">Previous</button><button type="button" id="persona-next">Next</button></p>
+<p class="note" id="persona-who"></p>
+<details id="persona-several"><summary>Show several at once</summary><div id="persona-list"></div></details>
+</div>
 
 <h2 id="the-line"><span class="n">1</span>The line</h2>
 <p class="lead" id="line-lead">&nbsp;</p>
 <div class="chart" id="line"></div>
 <p class="note" id="line-key"></p>
-<p class="note">The exit is drawn straight, with descriptive location names along it; the rise, the crest and the descent. Places along it are given as stations, the way a road is measured: 0+463 is 463 meters from where the exit leaves the parkway. Above the line, a band's thickness represents the park's width today, from the exit across to the park's far edge, by land cover. Below the line, Proposed shows only what is proposed, on its own wider scale (marked on its side axis) so every proposal can be seen: each proposed path is a band as wide as the ground it would take, and a removal is a green band of the ground that would turn to grass; streams with the same name that touch are one stream, their votes added, and a stream is more opaque the more votes for it it has, net of those against, as a bubble is. A bubble is a proposed thing along the exit, stacked away from the line to avoid overlap; proposals with the same name standing within 40 meters of each other are one bubble with their count beside it (different names never merge), and its hover names them and adds their votes: its colour is its type's colour on the map, its area is its footprint at the bands' scale, and it is more opaque the more votes for it it has, net of those against. Only paths and removals are bands, and only the part inside the park counts; the bubbles keep Today's scale. Hover or tap anything to see what it is. <span id="line-note"></span></p>
+<details class="how"><summary>How to read this chart</summary><p class="note">The exit is drawn straight, with descriptive location names along it; the rise, the crest and the descent. Places along it are given as stations, the way a road is measured: 0+463 is 463 meters from where the exit leaves the parkway. Above the line, a band's thickness represents the park's width today, from the exit across to the park's far edge, by land cover. Below the line, Proposed shows only what is proposed, on its own wider scale (marked on its side axis) so every proposal can be seen: each proposed path is a band as wide as the ground it would take, and a removal is a green band of the ground that would turn to grass; streams with the same name that touch are one stream, their votes added, and a stream is more opaque the more votes for it it has, net of those against, as a bubble is. A bubble is a proposed thing along the exit, stacked away from the line to avoid overlap; proposals with the same name standing within 40 meters of each other are one bubble with their count beside it (different names never merge), and its hover names them and adds their votes: its colour is its type's colour on the map, its area is its footprint at the bands' scale, and it is more opaque the more votes for it it has, net of those against. Only paths and removals are bands, and only the part inside the park counts; the bubbles keep Today's scale. Hover or tap anything to see what it is.</p></details>
+<p class="note" id="line-shown"></p>
 
 <h2 id="the-shortlist"><span class="n">2</span>The shortlist</h2>
 <p class="lead" id="shortlist-lead">&nbsp;</p>

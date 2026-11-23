@@ -437,7 +437,7 @@ export function objects(shown, park, m) {
     const s = Number.isFinite(it.alongM) ? it.alongM : a.s;
     proposed.push({ ...it, s: Math.max(0, Math.min(m.length, s)), inPark: m.cell(a.s, a.d) >= 0 });
   }
-  const there = park.courts.map((c) => ({ name: c.label, color: c.color, areaM2: c.areaM2, s: c.s }));
+  const there = park.courts.map((c) => ({ name: c.label, kind: c.kind, color: c.color, areaM2: c.areaM2, s: c.s }));
   return { proposed, there, outside: proposed.filter((o) => !o.inPark).length, mostNet: Math.max(1, ...proposed.map((o) => o.net)) };
 }
 
@@ -467,23 +467,77 @@ export function where(g, park) {
   return near(g.s) === near(g.s1) ? `${a} to ${b} m, near ${near(g.s)}` : `${a} to ${b} m, ${near(g.s)} to ${near(g.s1)}`;
 }
 
+
+// ---------- personas (item 2, 2026-11-23): one persona at a time, each enabled or disabled ----------
+// personas.json lists each persona's `kinds`: the proposal types that serve them (type ids, as park.types names them).
+// Exactly those: a removal or a move of a thing that is there (remove-tree, move-court) is a kind of its own in the list.
+
+/** The ids of the personas a proposal type serves, in the personas' own order. */
+export function personaIds(typeId, personas) {
+  return personas.filter((p) => p.kinds.includes(typeId)).map((p) => p.id);
+}
+
+/** Whether a drawing (or a proposal made of them) serves a persona. */
+export function serves(thing, persona) {
+  return personaIds(thing.typeId, [persona]).length > 0;
+}
+
+/** What serves at least one enabled persona, each thing once, in the order given. An id nobody has is ignored. */
+export function forPersonas(list, personas, enabled) {
+  const on = personas.filter((p) => enabled.includes(p.id));
+  return list.filter((x) => on.some((p) => serves(x, p)));
+}
+
+/** Existing things in the park, named as the app's own types: a tennis court is served by whoever lists tennis-court. */
+export const THERE_TYPE = { tennis: "tennis-court", playground: "playground", plaza: "add-pedestrian-plaza" };
+
+/** The personas on, from the address ("#for=sitter,cyclist"): unknown ids dropped, none given means the first persona,
+ *  "#for=none" means every persona off (a state a reader can reach and keep). */
+export function parsePersonaHash(hash, personas) {
+  const found = /(?:^#|&)for=([^&]*)/.exec(hash ?? "");
+  if (found && found[1] === "none") return [];
+  const named = found ? found[1].split(",").filter((id) => personas.some((p) => p.id === id)) : [];
+  const ids = personas.filter((p) => named.includes(p.id)).map((p) => p.id);
+  return ids.length ? ids : personas.length ? [personas[0].id] : [];
+}
+
+/** The address for the personas on, in the list's own order. */
+export function personaHash(enabled, personas) {
+  const ids = personas.filter((p) => enabled.includes(p.id)).map((p) => p.id);
+  return `#for=${ids.length ? ids.join(",") : "none"}`;
+}
+
+/** The persona before or after the one given (the first of those on), wrapping round the list. */
+export function nextPersona(enabled, personas, by) {
+  const at = Math.max(0, personas.findIndex((p) => enabled.includes(p.id)));
+  return personas[(at + by + personas.length) % personas.length].id;
+}
+
 /** `selection`: the final map's answer `{ rows, via, at }`, or null for the stand-in (see `select`). */
-export function build(subs, park, selection = null) {
+export function build(subs, park, selection = null, view = null) {
   const m = measure(park);
-  const items = subs.map((s) => read(s, park, m));
+  const mine = view ? (list) => forPersonas(list, view.personas, view.enabled) : (list) => list;
+  const kept = mine(subs); // submissions carry typeId, as the read drawings do
+  const every = subs.map((s) => read(s, park, m)); // the final map's rows are looked up among all of them, for their colours
+  const items = kept.map((s) => read(s, park, m));
   const groups = group(items, park);
-  const voters = new Set(subs.flatMap((s) => s.votes.map((v) => v.voterId)));
-  const people = new Set([...voters, ...subs.map((s) => s.authorId)]);
-  const chosen = select(items, selection, m);
+  const voters = new Set(kept.flatMap((s) => s.votes.map((v) => v.voterId)));
+  const people = new Set([...voters, ...kept.map((s) => s.authorId)]);
+  // the final map's selection is asked about every drawing; a persona keeps only the rows that serve them
+  const chosen = select(every, selection, m);
+  if (view) chosen.shown = mine(chosen.shown);
+  const objs = objects(chosen.shown, park, m);
+  if (view) objs.there = objs.there.filter((o) => mine([{ typeId: THERE_TYPE[o.kind] }]).length);
   return {
     m, items, groups, chosen,
     ranked: rank(groups),
     streams: streams(chosen.shown, park, m),
-    objects: objects(chosen.shown, park, m),
+    objects: objs,
     themes: themes(items, park),
     counts: {
-      drawings: subs.length,
-      votes: subs.reduce((a, s) => a + s.votes.length, 0),
+      drawings: kept.length,
+      allDrawings: subs.length,
+      votes: kept.reduce((a, s) => a + s.votes.length, 0),
       people: people.size,
       proposals: groups.length,
     },
