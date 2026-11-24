@@ -116,12 +116,12 @@ h1 { font-family: var(--display); letter-spacing: -0.01em; }
 .masthead .lockup { display: block; height: 56px; width: auto; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 /* The front page opens like a blog post: headline, a drop cap, a few paragraphs, then the call to open the map. */
-.lead-post { max-width: calc(60ch + 2 * var(--gutter)); margin: 0 auto; padding: 1.1rem var(--gutter) 0.2rem; }
+.lead-post { max-width: calc(70ch + 2 * var(--gutter)); margin: 0 auto; padding: 1.1rem var(--gutter) 0.2rem; }
 .lead-post h2 { font-family: var(--display); font-size: clamp(1.7rem, 4.4vw, 2.4rem); font-weight: 500; line-height: 1.1; letter-spacing: -0.01em; margin-bottom: 0.7rem; text-wrap: balance; }
 .lead-post p { margin-bottom: 0.85rem; hyphens: auto; }
 /* The walk banner above the article, as wide as the article, with its credit in the caption style. */
 .lead-banner { margin: 0 0 1rem; }
-.lead-banner img { display: block; width: 100%; height: auto; }
+.lead-banner img { display: block; width: 100%; height: auto; aspect-ratio: 2.2 / 1; object-fit: cover; object-position: 50% 55%; }
 .lead-banner figcaption { margin-top: 0.35rem; font-size: var(--fs-small); color: var(--ink-faint); }
 .lead-banner figcaption a { color: inherit; }
 .lead-post a { color: var(--lane-green); text-decoration: underline; text-decoration-thickness: 0.5px; text-underline-offset: 0.18em; }
