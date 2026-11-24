@@ -1,0 +1,16 @@
+{
+ "build": "20261124T014432Z-eb2818a",
+ "entry": "assets/index-oesDd-3t.js",
+ "css": [
+  "assets/index-DBNP1wIm.css"
+ ],
+ "integrity": {
+  "assets/20-route-in-a-worker-B0UnfRj9.js": "sha384-mk4quRvHbHshlW6a7Xi+PosGnovm3LGG2XY2x5/7Q2nYDi5ORX12UBS2XoYA97iv",
+  "assets/index-DBNP1wIm.css": "sha384-+iajUvqVw+RZ3XjBle/ntyjJvkqbAboLDwSfG1ALg+rCzmjHxkZDFKXPPVgH8s9J",
+  "assets/index-oesDd-3t.js": "sha384-84FrKjLxnsDTHb6bzMZA6Q5YbttP0YZx4W4FaBU7WNACCbg7PUYFAAWUdMMfEGVd"
+ },
+ "content": "6dc7ba84b23814e0e6ab360b48cf3cac40edeb56154275a4a65ad26f7db811f7",
+ "env": "production",
+ "commit": "eb2818a8434c7edf4d346a50731a10655e9eac94",
+ "area": ""
+}

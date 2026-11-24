@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
-  <head>
-<base href="/"><script>(function receiver(trustedOrigin, max, idPattern, keys) {
+<head>
+<script>(function receiver(trustedOrigin, max, idPattern, keys) {
   const fragment = location.hash;
   if (!fragment.startsWith("#handoff=")) return;
   const clean = new URL(location.href);
@@ -97,35 +97,34 @@
     fallback();
   }
 })("https://sphericalharmonics.org",400000,"^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",["exit12n.deviceId","exit12n.name","exit12n.name.asked","exit12n.name.asked.exit12n","exit12n.layers.trees","exit12n.layers.buildings","exit12n.camera-tip.dismissed","exit12n.hint.selected","exit12n.add-menu.open","exit12n.hidden","exit12n.voiceTold","exit12n.voiceDevice","exit12n.voiceLabel","exit12n.voiceLog","exit12n.voiceLog:https://exit12n-api-katze52zaq-uc.a.run.app/api"]);</script>
-    <meta charset="UTF-8" />
-    <!-- maximum-scale=1: Safari on a phone does not zoom the page into a field that takes the focus (it still ignores
-         the limit for a pinch, which the stylesheet's touch-action rules refuse instead). 70-lay-out-the-chrome.ts
-         sets it again, for a copy of this page older than the script it loads. -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
-    <title>Exit 12N: edit the street in 3D</title>
-    <link rel="icon" href="data:," />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Mono:wght@300..700&display=swap" />
-    <link rel="stylesheet" data-exit12n-own integrity="sha384-TCyh54hEkvlWyFe1xRW335oX2GiFa2kNUAUdUR8ghlGPVEd3T9VsAQ0sDeC9WnrT" crossorigin href="./assets/index-DuX_1MQJ.css">
-  <link rel="canonical" href="https://exit12n.org/">
-<meta property="og:url" content="https://exit12n.org/">
-  <link rel="modulepreload" integrity="sha384-/Y0MwaW3qqttKlXe+YlwVsAayfgv/MK8pwkK/KoKd/+63EI+t/2LCEmsiS/mFEWa" crossorigin href="./assets/index-CRhw2dul.js">
-    <script>"use strict";var exit12nLoader=(()=>{var b=Object.defineProperty;var H=Object.getOwnPropertyDescriptor;var U=Object.getOwnPropertyNames;var j=Object.prototype.hasOwnProperty;var O=(t,e)=>{for(var n in e)b(t,n,{get:e[n],enumerable:!0})},N=(t,e,n,r)=>{if(e&&typeof e=="object"||typeof e=="function")for(let o of U(e))!j.call(t,o)&&o!==n&&b(t,o,{get:()=>e[o],enumerable:!(r=H(e,o))||r.enumerable});return t};var W=t=>N(b({},"__esModule",{value:!0}),t);var Z={};O(Z,{SCRIPT_WAIT_MS:()=>k,acceptedSeq:()=>C,checkedInfo:()=>_,chooseTheBuilds:()=>R,loadTheBuild:()=>y,readThePointer:()=>M,readTheSiteCopy:()=>D,start:()=>K,verifiedPointer:()=>I});var P=t=>`exit12n.release.${t}`,B=/^sha(256|384|512)-[A-Za-z0-9+/]+=*$/,A=/^[A-Za-z0-9][A-Za-z0-9._-]*(\/[A-Za-z0-9][A-Za-z0-9._-]*)*$/,L=t=>{let e=atob(t),n=new Uint8Array(new ArrayBuffer(e.length));for(let r=0;r<e.length;r++)n[r]=e.charCodeAt(r);return n};function _(t){let e=t;if(!e||typeof e.build!="string"||typeof e.entry!="string"||!Array.isArray(e.css)||!e.integrity||typeof e.integrity!="object")throw new Error("not a build");for(let n of[e.entry,...e.css,...Object.keys(e.integrity)])if(typeof n!="string"||!A.test(n))throw new Error(`not a path under the build: ${String(n)}`);for(let n of[e.entry,...e.css])if(!B.test(String(e.integrity[n]??"")))throw new Error(`no integrity for ${n}`);for(let n of Object.values(e.integrity))if(typeof n!="string"||!B.test(n))throw new Error("not an integrity");if(e.api!==void 0&&typeof e.api!="string")throw new Error("not an API address");if(e.content!==void 0&&(typeof e.content!="string"||!/^[0-9a-f]{64}$/.test(e.content)))throw new Error("not a content hash");return{...e,build:e.build,entry:e.entry,css:e.css,integrity:e.integrity}}async function I(t,e,n){let r=t;if(!e.pointer||!r||typeof r.payload!="string"||typeof r.sig!="string")throw new Error("not a signed pointer");let o=await n.importKey("spki",L(e.pointer.key),{name:"ECDSA",namedCurve:"P-256"},!1,["verify"]);if(!await n.verify({name:"ECDSA",hash:"SHA-256"},o,L(r.sig),new TextEncoder().encode(r.payload)))throw new Error("the pointer's signature is not the release key's");let u=JSON.parse(r.payload);if(u.kind!=="pointer"||u.files!==void 0)throw new Error("signed, but not a pointer");if(u.v!==1||u.env!==e.env||!Number.isInteger(u.seq)||u.seq<1||typeof u.signedAt!="string")throw new Error("not this environment's pointer");let{api:f,...c}=_(u.client),i=String(u.client?.root??"");if(!i.startsWith(e.pointer.root)||!i.endsWith("/")||!A.test(i.slice(e.pointer.root.length,-1)))throw new Error("the pointer names a build somewhere else");return{...u,client:{...c,root:i}}}async function $(t,e){let n=new AbortController,r;try{return await Promise.race([e(n.signal),new Promise((o,s)=>{r=setTimeout(()=>{n.abort(),s(new Error(`no answer in ${t} ms`))},t)})])}finally{clearTimeout(r)}}function C(t,e){try{return Number(e?.getItem(P(t))??0)||0}catch{return 0}}async function M(t,e,n=t.waitMs){if(!t.pointer)throw new Error("no fast lane here");let r=t.pointer.url,o=await $(n,async f=>{let c=await e.fetch(r,{cache:"no-store",signal:f,credentials:"omit"});if(!c.ok)throw new Error(`the pointer answered ${c.status}`);return c.json()}),s=await I(o,t,e.subtle),u=C(t.env,e.storage);if(s.seq<u)throw new Error(`the pointer is release ${s.seq}, older than ${u} already taken here`);try{s.seq>u&&e.storage?.setItem(P(t.env),String(s.seq))}catch{}return s}async function D(t,e=3e3){let n=await $(e,async r=>{let o=await t.fetch(new URL(`build.json?t=${t.now()}`,t.base).href,{cache:"no-store",signal:r});if(!o.ok)throw new Error(`build.json answered ${o.status}`);return o.json()});return _(n)}async function R(t,e){let n=[],r=new URL("./",e.base).href,o={source:"baked",root:r,info:t.baked,pointer:null,config:t,notes:n},s=D(e).then(i=>i.build!==t.baked.build||i.api?{source:"pages",root:r,info:i,pointer:null,config:t,notes:n}:null,i=>(n.push(`build.json: ${String(i?.message??i)}`),null)),u=async()=>{let i=await s;return i?[i,o]:[o]};if(t.pointer)try{let i=await M(t,e);return{first:{source:"service",root:i.client.root,info:i.client,pointer:i,config:t,notes:n},rest:u}}catch(i){n.push(`pointer: ${String(i?.message??i)}`)}let[f,...c]=await u();return{first:f,rest:async()=>c}}var k=12e3,z=2e3;function y(t,e,n=document,r=window){let o=t,s=r;s.__exit12nBoot=o,(s.__exit12nBoots??(s.__exit12nBoots=[])).push(o);let u=[],f=[],c=s.__exit12nSheets??(s.__exit12nSheets=[]),i=l=>{l.remove();let d=c.indexOf(l);d>=0&&c.splice(d,1)},g=!1,x=(l,d)=>{if(!g&&(g=!0,!s.__exit12nStarted)){for(let a of u)f.includes(a)?d&&i(a):a.remove();d||(o.givenUp=!0),o.notes.push(`${o.source}: ${l}`),e().then(a=>{let[p,...m]=a;if(!p){console.error("exit12n: no build could be loaded",o.notes),s.__exit12nNoMore=!0;for(let q of(s.__exit12nWaiting??[]).splice(0))q();return}p.notes=o.notes,y(p,async()=>m,n,r)})}},E=(l,d)=>{let a=n.createElement(l);return a.setAttribute("integrity",o.info.integrity[d]),a.setAttribute("crossorigin","anonymous"),u.push(a),a},v=Array.from(n.querySelectorAll?.("link[data-exit12n-own]")??[]),S=(l,d)=>{let a=E("link",l);f.push(a),c.push(a),a.rel="stylesheet",a.href=o.root+l,a.addEventListener("load",()=>{if(s.__exit12nBoot!==o){s.__exit12nStarted&&i(a);return}for(let p of v)p.remove();for(let p of c.filter(m=>!f.includes(m)))i(p)}),a.addEventListener("error",()=>{i(a),f.splice(f.indexOf(a),1),!(g&&s.__exit12nBoot!==o)&&(d?setTimeout(()=>{s.__exit12nBoot===o&&S(l,!1)},z):o.notes.push(`${o.source}: the stylesheet ${l} did not load, twice; the page keeps its own`))}),n.head.append(a)};for(let l of o.info.css)v.some(d=>d.href===o.root+l)||S(l,!0);let h=E("script",o.info.entry);h.type="module",h.src=o.root+o.info.entry;let w;h.addEventListener("load",()=>{g=!0,clearTimeout(w)}),h.addEventListener("error",()=>{clearTimeout(w),x(`${o.info.entry} did not load`,!0)});let T=()=>{n.head.append(h),e().then(l=>{l.length&&!g&&(w=setTimeout(()=>x(`${o.info.entry} had not loaded in ${k/1e3} s`,!1),k))})};n.readyState==="loading"?n.addEventListener("DOMContentLoaded",T,{once:!0}):T()}async function K(t){let e=null;try{e=window.localStorage}catch{}let n={fetch:window.fetch.bind(window),subtle:window.crypto?.subtle,storage:e,now:()=>Date.now(),base:document.baseURI};try{let{first:r,rest:o}=await R(t,n);y(r,o)}catch(r){y({source:"baked",root:new URL("./",document.baseURI).href,info:t.baked,pointer:null,config:t,notes:[String(r)]},async()=>[])}}return W(Z);})();
-exit12nLoader.start({"env":"production","baked":{"build":"20261121T015521Z-2c9840f","entry":"assets/index-CRhw2dul.js","css":["assets/index-DuX_1MQJ.css"],"integrity":{"assets/06-answer-in-the-worker-C-A6CRGZ.js":"sha384-J7LNRiGnjnfyl3NAV7O9zkQ89wc2nmm+jCCVrqZrQz1X9c6Zumkhs15ne3dV0ygt","assets/20-route-in-a-worker-CmZduLVZ.js":"sha384-SLTXsisqjj4TY8/+Q0iEg1QhLpVSB4eoyrbRcWJ6tKL3X2OgDFwC5B65dCsneRMV","assets/index-CRhw2dul.js":"sha384-/Y0MwaW3qqttKlXe+YlwVsAayfgv/MK8pwkK/KoKd/+63EI+t/2LCEmsiS/mFEWa","assets/index-DuX_1MQJ.css":"sha384-TCyh54hEkvlWyFe1xRW335oX2GiFa2kNUAUdUR8ghlGPVEd3T9VsAQ0sDeC9WnrT"},"content":"d4b6a752858d9811b25959874189d81766413f28ea1bbd3e3cb9cee72f39e4ec"},"pointer":null,"waitMs":3000});</script>
-  </head>
-  <body>
-    <div id="scene"></div>
-    <div id="chrome">
-      <div class="plate toolbar" id="toolbar">
-        <div class="logo"><b>EXIT 12N</b></div>
-        <div id="tools" role="toolbar" aria-label="Tools"></div>
-        <button type="button" class="tool" id="layers-button" aria-haspopup="true" aria-expanded="false" aria-controls="layers">More</button>
-      </div>
-    </div>
-    <div id="rail"></div>
-    <div id="layers" class="plate popover" hidden><div id="more-actions" role="group" aria-label="More"></div></div>
-    <div id="top-list" class="plate popover" hidden></div>
-    <div id="dock"></div>
-    <div id="zoom"></div>
-  </body>
+<script>var go=(function mapAddressFor(pathname, search, hash, map) {
+  const names = ["p", "j", "panel", "phase", "view", "pitch", "distance", "name", "marker", "figure", "phaseVotes", "ghosts", "phases", "device", "perf", "profile", "tiling", "fxms", "stats", "tip", "fakeEmail", "fakeSub"];
+  const asked = search.replace(/^\?/, "").split("&").map((pair) => {
+    const raw = (pair.split("=")[0] ?? "").replace(/\+/g, " ");
+    try {
+      return decodeURIComponent(raw);
+    } catch (e) {
+      return raw;
+    }
+  });
+  const app = asked.some((name) => names.indexOf(name) >= 0) || hash === "#signed-in" || hash === "#sign-in-failed";
+  return app ? map + search + hash : null;
+})(location.pathname,location.search,location.hash,"/map/");if(go)location.replace(go);</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page not found: Exit 12N</title>
+<meta name="robots" content="noindex">
+<style>
+:root { --ink: #1a1a1a; --paper: #ffffff; --link: #1a56db; }
+@media (prefers-color-scheme: dark) { :root { --ink: #ececec; --paper: #151515; --link: #7aa7ff; } }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 18px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 38rem; margin: 0 auto; padding: 3rem 1rem; }
+a { color: var(--link); }
+</style>
+</head>
+<body>
+<main>
+<p>There is no page here. Try the <a href="/">Exit 12N front page</a>, <a href="/map/">the map</a> or <a href="/results/">the results</a>.</p>
+</main>
+</body>
 </html>

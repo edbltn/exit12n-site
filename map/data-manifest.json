@@ -1,0 +1,158 @@
+{
+ "10-fetch-the-ground/data/heights-board.delta.i16.gz": {
+  "bytes": 191803,
+  "sha256": "8d981ba0f3583b1bbfddde14bec5c80e43b44d8f0f67801dbd287f723606cc61"
+ },
+ "10-fetch-the-ground/data/heights-board.json": {
+  "bytes": 783,
+  "sha256": "da038687ed25985a7906bc451ab3f34c8ab7beb3c4254ce9e0449e478f9f7ccf"
+ },
+ "10-fetch-the-ground/data/heights-board.json.gz": {
+  "bytes": 512,
+  "sha256": "bd6327ad5b658e63f669838b0c5c4a21656771af40493b10d607d4bd0b4d7236"
+ },
+ "10-fetch-the-ground/data/heights.delta.i16.gz": {
+  "bytes": 660852,
+  "sha256": "514109227e6dcfe3ee7d3deeb0a76e8bda574f6b883c5daf359ff32d1bf92374"
+ },
+ "10-fetch-the-ground/data/heights.json": {
+  "bytes": 832,
+  "sha256": "d8bf76a8b5c443eea7a98c12d678545845e1bb1e28a004379a44389a4e7f73af"
+ },
+ "10-fetch-the-ground/data/heights.json.gz": {
+  "bytes": 532,
+  "sha256": "93e4e680b20c0b950172b79bdb2caf39796ac240d267674df434014c5ba318e6"
+ },
+ "10-fetch-the-ground/data/ortho-middle-web.jpg": {
+  "bytes": 189095,
+  "sha256": "4e744bdc36a390d8975545215735b2a7a5c745b26ed0ac3261600fa365b2149e"
+ },
+ "10-fetch-the-ground/data/ortho-web.jpg": {
+  "bytes": 759871,
+  "sha256": "5ff6401c7270817b9ad4e92cbd10b21793552b39e4fca89c17a2b8647c2a46a8"
+ },
+ "10-fetch-the-ground/data/region.json": {
+  "bytes": 16151,
+  "sha256": "d751f3fce49af66d3202995fb04fc38cd6eebbe1c3b38ecbb172aa0c90e76cb1"
+ },
+ "10-fetch-the-ground/data/region.json.gz": {
+  "bytes": 4116,
+  "sha256": "d9163b732eb5de1029a41c8a4b96376ad6900ebf1e99df73f1ccdb59c4d18e89"
+ },
+ "10-fetch-the-ground/data/site-features.geojson": {
+  "bytes": 42,
+  "sha256": "ed778c73ea51338d6576fb5992b189f2b94d9f3d5e199f46c1af520d6b0b3e6c"
+ },
+ "10-fetch-the-ground/data/site-view.json": {
+  "bytes": 341848,
+  "sha256": "4aebd67e13967d99458141f6e9cd1b5c8b56f162a551869f5b1a647b6124a1bf"
+ },
+ "10-fetch-the-ground/data/site-view.json.gz": {
+  "bytes": 107143,
+  "sha256": "899b0817f18ba64939c59596e5be45ecbaa89261baf102e15b942e94631773d8"
+ },
+ "10-fetch-the-ground/data/streets-view.json": {
+  "bytes": 447664,
+  "sha256": "70fdb5a6ae72c20056f9dc46c9c55e40d1abdca9dd7c8dab8061cc48cc9226aa"
+ },
+ "10-fetch-the-ground/data/streets-view.json.gz": {
+  "bytes": 96519,
+  "sha256": "932c7848611f381acbbcee50f8bb257c63d0f62b0acb09b1d5c2146960c5b64a"
+ },
+ "15-scan-the-structures/data/buildings-web.json": {
+  "bytes": 6750,
+  "sha256": "4f2e977ab762e6568b52cbb760c64e5bfded2f5cf688a380c5a3aa2d87542beb"
+ },
+ "15-scan-the-structures/data/buildings-web.json.gz": {
+  "bytes": 2971,
+  "sha256": "7c6bee7a36bd31d597dba2c19419c99a4d52986d2b6b1e6f4762b8c1ed022ea2"
+ },
+ "15-scan-the-structures/data/buildings.i16.gz": {
+  "bytes": 149018,
+  "sha256": "5d3a915dae77ed634f3cbd3398ef9806906bd03386492b1a490e63f0dc37ace7"
+ },
+ "15-scan-the-structures/data/decks.json": {
+  "bytes": 182600,
+  "sha256": "c8ded2d66a31620d564a5e8ee8e8582b3170333193e83934ae18b3a2af2e322e"
+ },
+ "15-scan-the-structures/data/decks.json.gz": {
+  "bytes": 29779,
+  "sha256": "c94b00d750d188d74fcf97ac7dd5d70d2448c087d05a43a83237ef44ec7b0403"
+ },
+ "15-scan-the-structures/data/piers.json": {
+  "bytes": 28048,
+  "sha256": "4f0acb6ca3331fd987a73ab1ce90840ad5bd0e6ae2e2c3450742327c09bba65b"
+ },
+ "15-scan-the-structures/data/piers.json.gz": {
+  "bytes": 5028,
+  "sha256": "d01368aae8f43bca7f9cab357960822898b5ea588684d3a9d651e81a20bfe242"
+ },
+ "15-scan-the-structures/data/play-areas.json": {
+  "bytes": 39741,
+  "sha256": "3a91fd0c866a8c4e31766ce3837e35a76777b9809496c13b96d1fa890e736368"
+ },
+ "15-scan-the-structures/data/play-areas.json.gz": {
+  "bytes": 13683,
+  "sha256": "ca305ae54c0ec29eab3792a214fc0d34b85cf109d57fa4a2ecfdacadb4f6d147"
+ },
+ "15-scan-the-structures/data/scan.json": {
+  "bytes": 16052,
+  "sha256": "c3b0b97edef1c295f87e1fe7a9ea5b4d0c0964b7e962919534a3c4455ddb1a14"
+ },
+ "15-scan-the-structures/data/scan.json.gz": {
+  "bytes": 4183,
+  "sha256": "42eedcbbff65753eb6bae16d61627ff15f7f2c8cd6afd0ccf6225a5068a11313"
+ },
+ "15-scan-the-structures/data/street-names.json": {
+  "bytes": 25503,
+  "sha256": "9b2d5f2f5d3060ec6ee40b2d423b80a54217bad2aaa785d9fe42009fa7e77f33"
+ },
+ "15-scan-the-structures/data/street-names.json.gz": {
+  "bytes": 7086,
+  "sha256": "06687b042f67d04b91fca549f78a8dd1511503f8036178227f9de3021265d3f0"
+ },
+ "15-scan-the-structures/data/surfaces-ground.json": {
+  "bytes": 7917,
+  "sha256": "ad6ba37eceb561218a89ab23586da4da7ce4a29079c4b872aa023884a354b4af"
+ },
+ "15-scan-the-structures/data/surfaces-ground.json.gz": {
+  "bytes": 2178,
+  "sha256": "bb7f497751dffa452e5fd6d1d8a5a534d0d1f78fe2844aecb91dd267762cf1a4"
+ },
+ "15-scan-the-structures/data/surfaces-ground.planes.i16.gz": {
+  "bytes": 953719,
+  "sha256": "3e8910adcf0a3c92321ab1ebf60de3b12a5d64708bbab167396227b5385d81a8"
+ },
+ "15-scan-the-structures/data/surfaces-ground.planes.u16.gz": {
+  "bytes": 825894,
+  "sha256": "913055859257c7a47f86c3c8eadfeb82081efca7a2a2831987e83c9e6ddd862d"
+ },
+ "15-scan-the-structures/data/surfaces-lines.json": {
+  "bytes": 5389,
+  "sha256": "1d21789df11b4074d2e2abb7f3cfae797e10a78f19590a86d6efc5174945ea11"
+ },
+ "15-scan-the-structures/data/surfaces-lines.json.gz": {
+  "bytes": 1551,
+  "sha256": "26a15e6912b026762fd406f0bda8aa4e8a970fbd79f3c5a3b2d7148012f43854"
+ },
+ "15-scan-the-structures/data/surfaces-lines.planes.i16.gz": {
+  "bytes": 257703,
+  "sha256": "dcc3872f8f74869fd967d1315d0cedc5d42e72f528100872d2cd49dec3fac868"
+ },
+ "15-scan-the-structures/data/surfaces-lines.planes.u16.gz": {
+  "bytes": 23326,
+  "sha256": "dcc4a625ece903f51ca4ac2069ae3d3e6b059fbcc9c865e5f5af27020b8d0abb"
+ },
+ "15-scan-the-structures/data/trees-web.json": {
+  "bytes": 7169,
+  "sha256": "78bbc414016206e1c11d996913b0e226ecb9bb53eda3ab78a0b9b78201ac6280"
+ },
+ "15-scan-the-structures/data/trees-web.json.gz": {
+  "bytes": 2518,
+  "sha256": "5ae504c64888697545ab189f22dff966169f823c6dae2bd97c3afd7f44c5732c"
+ },
+ "15-scan-the-structures/data/trees.i16.gz": {
+  "bytes": 23409,
+  "sha256": "d9d5c03550e769d0809930748618787c6141413bec494627a23af6766d852f74"
+ }
+}
