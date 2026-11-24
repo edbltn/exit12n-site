@@ -1,5 +1,6 @@
-/* Exit 12N: the look of sphericalharmonics.org (its assets/site.css, 2026-10-27), kept to the parts this site uses.
-   A typeset-paper look: Latin Modern Roman, small caps, numbered sections, hairline rules.
+/* Exit 12N: the campaign look (Eric, 11/24, brand bd45): DM Sans for all text, ink #111111 on white, the event blue #2d28ff for
+   headings, rules and links; the orange #f15c22 only inside the logo. The layout and class names are still the ones taken from
+   sphericalharmonics.org's stylesheet, so pages written for them keep working.
    Class names and tokens are the main site's own, so a page written for one reads the same on the other.
    Shared by the front page, the not-found page and the results page (link /style/site.css). */
 
@@ -31,25 +32,36 @@
     font-weight: 600 700; font-style: normal; font-display: swap;
 }
 
+/* DM Sans (the SIL Open Font License, fonts/DM-Sans-LICENSE.txt), variable weight, latin. */
+@font-face {
+    font-family: "DM Sans";
+    src: url("fonts/dm-sans-latin-wght-normal.woff2") format("woff2");
+    font-weight: 100 1000; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: "DM Sans";
+    src: url("fonts/dm-sans-latin-wght-italic.woff2") format("woff2");
+    font-weight: 100 1000; font-style: italic; font-display: swap;
+}
 /* ---------- Tokens ---------- */
 :root {
     --fs-small: 0.9rem;
     --fs-body: 1.125rem;
     --fs-large: 1.25rem;
-    --paper: #faf3e5;
-    --paper-deep: #f3eee2;
-    --ink: #1b1813;
-    --ink-soft: #4f4a40;
-    --ink-faint: #7a7366;
-    --sienna: #a86b3c;
-    --sienna-deep: #8a4f22;
-    --lane-green: #2f6a2a;
-    --road-yellow: #f2c230;
-    --hairline: rgba(27, 24, 19, 0.22);
-    --rule: rgba(27, 24, 19, 0.85);
-    --serif: "LM Roman 12", "Latin Modern Roman", "Computer Modern", Georgia, "Times New Roman", serif;
-    --display: "LM Roman 17", "LM Roman 12", Georgia, serif;
-    --caps: "CMU Serif", var(--serif);
+    --paper: #ffffff;
+    --paper-deep: #f3f3f8;
+    --ink: #111111;
+    --ink-soft: #3a3a3a;
+    --ink-faint: #6b6b6b;
+    --sienna: #2d28ff;
+    --sienna-deep: #2d28ff;
+    --lane-green: #2d28ff;
+    --road-yellow: #2d28ff;
+    --hairline: rgba(17, 17, 17, 0.16);
+    --rule: #2d28ff;
+    --serif: "DM Sans", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    --display: var(--serif);
+    --caps: var(--serif);
     --mono: "Latin Modern Mono", "SF Mono", Menlo, monospace;
     --measure: 66ch;
     --page: 1080px;
@@ -58,16 +70,17 @@
 
 /* Dark only when the reader picks it (toggle, top right); light is the default. */
 :root[data-theme="dark"] {
-    --paper: #18130d;
-    --paper-deep: #1f1c16;
-    --ink: #ece6d8;
-    --ink-soft: #c2baa8;
-    --ink-faint: #8f8878;
-    --sienna: #d39a68;
-    --sienna-deep: #e0ad7e;
-    --lane-green: #8cc47f;
-    --hairline: rgba(236, 230, 216, 0.2);
-    --rule: rgba(236, 230, 216, 0.8);
+    --paper: #0f0f16;
+    --paper-deep: #17172a;
+    --ink: #ececf2;
+    --ink-soft: #c4c4d0;
+    --ink-faint: #8e8e9c;
+    --sienna: #9c99ff;
+    --sienna-deep: #9c99ff;
+    --lane-green: #9c99ff;
+    --hairline: rgba(236, 236, 242, 0.2);
+    --rule: #9c99ff;
+    --road-yellow: #9c99ff;
 }
 
 /* ---------- Base ---------- */
@@ -82,13 +95,13 @@ body {
     letter-spacing: -0.003em;
     color: var(--ink);
     background: var(--paper);
-    font-variant-numeric: oldstyle-nums;
+    font-variant-numeric: lining-nums;
     font-kerning: normal;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
 }
 
-::selection { background: var(--road-yellow); color: #1b1813; }
+::selection { background: var(--road-yellow); color: #fff; }
 :focus-visible { outline: 2px solid var(--sienna-deep); outline-offset: 3px; }
 a { color: inherit; }
 h1 { font-family: var(--display); letter-spacing: -0.01em; }
@@ -168,7 +181,7 @@ h1 { font-family: var(--display); letter-spacing: -0.01em; }
 /* ---------- Page body ---------- */
 .container { max-width: var(--page); margin: 0 auto; padding: 1.75rem var(--gutter) 1rem; }
 
-.kicker { font-family: var(--caps); text-transform: lowercase; font-variant-caps: small-caps; font-size: var(--fs-small); font-weight: 700; letter-spacing: 0.04em; color: var(--sienna-deep); }
+.kicker { font-family: var(--caps); text-transform: uppercase; font-variant-caps: normal; font-size: 0.8em; font-size: var(--fs-small); font-weight: 700; letter-spacing: 0.04em; color: var(--sienna-deep); }
 
 /* The one open block, above the numbered sections. */
 .opening { border-top: 2px solid var(--rule); padding-top: 0.6rem; margin-bottom: 2.25rem; }
@@ -220,7 +233,7 @@ p.drop::first-letter { font-weight: 500; font-size: 3.1em; float: left; line-hei
 .relations { list-style: none; margin: 0.9rem 0; max-width: var(--measure); }
 .relations li { display: grid; grid-template-columns: 11rem 1fr; gap: 0 1rem; padding: 0.45rem 0; border-top: 0.5px solid var(--hairline); font-size: var(--fs-body); font-variant-numeric: lining-nums; }
 .relations li:last-child { border-bottom: 0.5px solid var(--hairline); }
-.relations .relation { font-family: var(--caps); text-transform: lowercase; font-variant-caps: small-caps; letter-spacing: 0.04em; font-weight: 700; color: var(--sienna-deep); }
+.relations .relation { font-family: var(--caps); text-transform: uppercase; font-variant-caps: normal; font-size: 0.8em; letter-spacing: 0.04em; font-weight: 700; color: var(--sienna-deep); }
 .relations .who { display: block; font-weight: 700; }
 
 /* ---------- Data: the list of posts, and one post ---------- */
@@ -304,3 +317,5 @@ footer li { font-size: var(--fs-small); margin-bottom: 0.2rem; }
     details.sec > .sec-body { display: block; }
     .toolbar, .skip-link, .theme-toggle { display: none; }
 }
+/* Campaign look: headings in the event blue. */
+.lead-post h2, details.sec > summary h2 .title, .post h1, .post h2 { color: var(--sienna-deep); }
