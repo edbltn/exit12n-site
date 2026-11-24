@@ -1,495 +1,369 @@
-// Draw the three charts from the live submissions and keep them fresh.
-// Every name, colour and number drawn comes from the live data or from park.json (the app's own files).
-import { build, bubbleOpacity, forPersonas, nextPersona, pageOf, parsePersonaHash, personaHash, streamOpacity, themesLead, voteText, where } from "./model.js";
-import { layoutLine, station } from "./layout.js";
+// The results page (round 11, Eric 2026-11-24 17:20): two filters (who: Walker, Gardener and nature, Kids and play, Other;
+// where: the ramp's sections and off the ramp), then the rankings (proposals by votes; where the changes went, by type and
+// every drawing as a square shaded by its votes), the bubbles along the ramp (area, votes, the voted paths, a zoom window)
+// and what each group gets. Everything starts on; the address keeps what is switched off (#for=...&in=...).
+// Live: the drawings and votes come from the Exit 12N API every 15 seconds, read and grouped as the charts read them.
+import { bubbleOpacity, build, rank, themes, where } from "./charts/model.js";
+import { offers, voteWords } from "./offers.js";
+import { formatHash, parseHash, sectionOf } from "./filters.js";
+import { alongRamp, byType, clampWindow, keep, labelled, lanes, radius, voteStep } from "./views.js";
 
 const REFRESH_S = 15;
 const API = "https://exit12n-api-katze52zaq-uc.a.run.app/api/submissions";
-// The API answers browsers on exit12n.org. On a local test server it does not, so serve.py forwards it at api/.
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
 const SOURCES = LOCAL ? ["api/submissions", API] : [API];
-// The final map's own selection: the function /final/ runs, or the snapshot it writes when published.
-const FINAL = "https://exit12n.org/final/";
-const FINAL_RETRY_S = 300; // while the final map is not there, look again this often
-
-const INK = "#1b1813";
-const SOFT = "#4f4a40";
-const FAINT = "#7a7366";
-const SIENNA = "#a86b3c";
-const PAPER = "#faf3e5";
-const UNCLASSED = "#e6dfcf";
-
-const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-const textW = (t, size = 13) => t.length * size * 0.47 + 4;
-const people = (n) => `${n} ${n === 1 ? "person" : "people"}`;
-const m2 = (a) => `${Math.round(a).toLocaleString("en-US")} m²`;
-
-// ---------- 1. the line ----------
-
-/** A texture per land-cover class, drawn over the app's own colour for it. */
-function patterns() {
-  const p = (id, w, h, body) => `<pattern id="tx-${id}" width="${w}" height="${h}" patternUnits="userSpaceOnUse">${body}</pattern>`;
-  const s = `stroke="${INK}" fill="none"`;
-  return [
-    p("asphalt", 6, 6, `<circle cx="1.5" cy="1.5" r="0.7" fill="${INK}" fill-opacity="0.38"/><circle cx="4.5" cy="4.5" r="0.7" fill="${INK}" fill-opacity="0.38"/>`),
-    p("concrete", 9, 9, `<path d="M0 0.5H9M0.5 0V9" ${s} stroke-opacity="0.22" stroke-width="0.8"/>`),
-    p("grass", 7, 8, `<path d="M1.5 1v3M5 5v3" ${s} stroke-opacity="0.4" stroke-width="0.9"/>`),
-    p("leaf-litter", 12, 12, `<circle cx="3.5" cy="3.5" r="2.4" ${s} stroke-opacity="0.3" stroke-width="0.8"/><circle cx="9.5" cy="9.5" r="2.4" ${s} stroke-opacity="0.3" stroke-width="0.8"/>`),
-    p("water", 12, 6, `<path d="M0 3q3 -3 6 0t6 0" ${s} stroke-opacity="0.35" stroke-width="0.8"/>`),
-    p("none", 7, 7, `<path d="M-1 8L8 -1" ${s} stroke-opacity="0.28" stroke-width="0.8"/>`),
-  ].join("");
-}
-
-const votes = voteText;
-const tipOf = (...lines) => lines.filter(Boolean).join("|");
-const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
-
-function drawLine(model, park, width) {
-  const ob = model.objects;
-  const L = layoutLine(model, park, width);
-  const { W, narrow, X0, X1, GAP, x, xb } = L;
-  const parts = []; // drawn with the line at y = 0: today above (negative), proposed below
-
-  for (const { band: s, near, far } of [...L.today.drawn, ...L.after.drawn]) {
-    const d = `M${near.map((y, b) => `${xb(b).toFixed(1)},${y.toFixed(1)}`).join("L")}L${far.map((y, b) => `${xb(b).toFixed(1)},${y.toFixed(1)}`).reverse().join("L")}Z`;
-    // a stream of several same-name proposals reads like a merged bubble: "3 proposals, Boardwalk", then the votes added
-    const named = s.count > 1 ? `${s.count} proposals, ${s.label}` : s.label;
-    const tip = s.kind === "cover" ? cap(s.label) : s.kind === "removal" ? tipOf(`${named}: this ground turns to grass`, votes(s.for, s.against)) : tipOf(named, votes(s.for, s.against));
-    // below the line a stream is more opaque the more net votes it has, like a bubble; the land cover above is solid
-    const op = s.kind === "cover" ? "" : ` fill-opacity="${streamOpacity(s, model.streams.below ?? []).toFixed(2)}"`;
-    parts.push(`<path d="${d}" fill="${s.color ?? UNCLASSED}"${op} stroke="${PAPER}" stroke-width="0.8" data-tip="${esc(tip)}"/>` +
-      (s.kind === "cover" ? `<path d="${d}" fill="url(#tx-${s.key})" pointer-events="none"/>` : ""));
-  }
-
-  // a removal is no band and no bubble: the ground it covered is grass now. Over that stretch of the grass band a
-  // hover or tap names the removal and its votes.
-  const grass = L.after.drawn.find((d) => d.band.key === "grass");
-  if (grass && model.streams.removals.length) {
-    const named = (b) => model.streams.removals.filter((r) => r.bins.has(b)).map((r) => [r.label, votes(r.for, r.against)].filter(Boolean).join(": "));
-    const bins = grass.near.length;
-    for (let a = 0; a < bins; ) {
-      const names = named(a).join("; ");
-      let b = a;
-      while (b + 1 < bins && named(b + 1).join("; ") === names) b++;
-      if (names) {
-        // the stretch runs from half way to the section before to half way to the one after
-        const xs = [];
-        for (let k = a; k <= b; k++) xs.push(k);
-        const edge = (ys) => xs.map((k) => `${xb(k).toFixed(1)},${ys[k].toFixed(1)}`);
-        const left = xb(a) - (a > 0 ? (xb(a) - xb(a - 1)) / 2 : 0);
-        const right = xb(b) + (b + 1 < bins ? (xb(b + 1) - xb(b)) / 2 : 0);
-        const d = `M${left.toFixed(1)},${grass.near[a].toFixed(1)}L${edge(grass.near).join("L")}L${right.toFixed(1)},${grass.near[b].toFixed(1)}L${right.toFixed(1)},${grass.far[b].toFixed(1)}L${edge(grass.far).reverse().join("L")}L${left.toFixed(1)},${grass.far[a].toFixed(1)}Z`;
-        // a wide unseen edge as well, so a strip of grass a pixel or two thick can still be hovered or tapped
-        parts.push(`<path class="removal" d="${d}" fill="transparent" stroke="transparent" stroke-width="12" pointer-events="all" data-tip="${esc(`${cap(grass.band.label)}; ${names}`)}"/>`);
-      }
-      a = b + 1;
-    }
-  }
-
-  // every bubble near its own distance along the exit, resting on the bands, none overlapping (layout.js)
-  const bubble = (c, opacity, tip, kind) =>
-    `<circle class="bubble" data-kind="${kind}" data-members="${c.o.members?.length ?? 1}" cx="${c.cx.toFixed(2)}" cy="${c.cy.toFixed(2)}" r="${c.r.toFixed(2)}" fill="${c.o.color}" fill-opacity="${opacity.toFixed(2)}" stroke="${c.o.color}" stroke-width="1.2" data-net="${c.o.net ?? ""}" data-home="${c.home.toFixed(2)}"/>` +
-    // a merged bubble wears its count at its upper right, as the editor's pins do
-    (c.o.members?.length > 1 ? `<text class="count" x="${(c.cx + c.r * 0.72 + 1).toFixed(1)}" y="${(c.cy - c.r * 0.72 + 3).toFixed(1)}" font-size="11.5" fill="${INK}" stroke="${PAPER}" stroke-width="3" paint-order="stroke" pointer-events="none">${c.o.members.length}</text>` : "") +
-    `<circle cx="${c.cx.toFixed(1)}" cy="${c.cy.toFixed(1)}" r="${Math.max(c.r, 9).toFixed(1)}" fill="transparent" data-tip="${esc(tip)}"/>`;
-  // with few bubbles on show (one persona at a time), each is named right on the page, under its circle (workshop 11/22:
-  // "labels written directly on them"); with many, the hover does it
-  const LABELLED = 14;
-  const named = (c, fits) => {
-    const base = String(c.o.name).replace(/^\d+ proposals, /, "");
-    const name = c.o.members?.length > 1 ? `${base} ×${c.o.members.length}` : base;
-    const text = name.length > 26 ? `${name.slice(0, 25)}…` : name;
-    // a name that fits across its circle is written on it; any other sits under it (never on a phone with many)
-    if (textW(text, 12.5) <= 2 * c.r - 6) return `<text class="label in" x="${c.cx.toFixed(1)}" y="${(c.cy + 4).toFixed(1)}" text-anchor="middle" font-size="12.5" fill="${INK}" pointer-events="none">${esc(text)}</text>`;
-    if (!fits) return "";
-    const left = c.cx < X0 + 70; // a bubble at the line's start: the name runs right from its edge, clear of the side axis
-    const right = c.cx > X1 - 70; // and at the far end it runs left, so it is never cut
-    return `<text class="label" x="${(left ? c.cx - c.r : right ? c.cx + c.r : c.cx).toFixed(1)}" y="${(c.cy + c.r + 13).toFixed(1)}" text-anchor="${left ? "start" : right ? "end" : "middle"}" font-size="12.5" fill="${INK}" stroke="${PAPER}" stroke-width="3" paint-order="stroke" pointer-events="none">${esc(text)}</text>`;
-  };
-  const labelled = L.proposed.length <= (narrow ? 4 : LABELLED); // on a phone the names would collide: the tap names them
-  for (const c of L.there) parts.push(bubble(c, 0.85, cap(c.o.name), "there"));
-  // a proposed thing, or a few merged, is more opaque the more net votes it has
-  for (const c of L.proposed) parts.push(bubble(c, bubbleOpacity(c.o.net, L.mostNet), tipOf(c.o.name, votes(c.o.for, c.o.against)), "proposed") + named(c, labelled));
-
-  // stop names, on as many rows as they need
-  const rows = [];
-  const stops = park.stops.map((p) => {
-    const at = station(p.s); // each stop's station, small and grey after its name
-    const w = (textW(p.name, 13) + textW(` ${at}`, 11.5)) * 1.1; // a little spare, so a name at either end is never cut
-    const cx = Math.max(w / 2 + 2, Math.min(W - w / 2 - 2, x(p.s)));
-    let row = rows.findIndex((ends) => ends < cx - w / 2 - 8);
-    if (row < 0) row = rows.push(0) - 1;
-    rows[row] = cx + w / 2;
-    return { ...p, cx, row, at };
-  });
-  const STOP_ROW = 17;
-  const top = rows.length * STOP_ROW + 10;
-  const highest = Math.min(...L.today.edge, ...L.there.map((c) => c.cy - c.r));
-  const lowest = Math.max(...L.after.edge, ...L.proposed.map((c) => c.cy + c.r + (labelled ? 16 : 0)));
-  const Y0 = Math.ceil(top - highest + 6);
-  // the X axis, in metres along the exit, runs under everything, clear of the stop names at the top
-  const AXIS_Y = Math.ceil(Y0 + lowest + 16);
-  const H = AXIS_Y + 30;
-  const tick = (cls, x1, y1, x2, y2) => `<line class="${cls}" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${FAINT}" stroke-width="1"/>`;
-  const xAxis = tick("axis", X0, AXIS_Y, X1, AXIS_Y) + L.axes.x.map((k, i) =>
-    tick("axis", k.x, AXIS_Y, k.x, AXIS_Y + 5) +
-    `<text class="xtick" data-m="${k.s}" x="${k.x.toFixed(1)}" y="${AXIS_Y + 19}" text-anchor="${i === 0 ? "start" : i === L.axes.x.length - 1 ? "end" : "middle"}" font-size="12" fill="${FAINT}">${k.label}</text>`).join("");
-  // the Y axis, in metres across the park out from the line, spans the bands only (the bubbles are stacked, not measured)
-  const YX = X0 - 7;
-  const yAxis = L.axes.y.length
-    ? tick("axis", YX, Y0 - GAP - L.half, YX, Y0 - GAP) + tick("axis", YX, Y0 + GAP, YX, Y0 + GAP + L.half) + L.axes.y.map((k) =>
-      tick("axis", YX - 4, Y0 + k.y, YX, Y0 + k.y) +
-      `<text class="ytick" data-m="${k.m}" x="${YX - 7}" y="${(Y0 + k.y + 4).toFixed(1)}" text-anchor="end" font-size="12" fill="${FAINT}">${k.label}</text>`).join("")
-    : "";
-
-  const stopMarks = stops.map((p) => {
-    const ly = 13 + p.row * STOP_ROW;
-    return `<line x1="${x(p.s).toFixed(1)}" y1="${ly + 5}" x2="${x(p.s).toFixed(1)}" y2="${Y0}" stroke="${INK}" stroke-opacity="0.3" stroke-width="1"/>` +
-      `<text x="${p.cx.toFixed(1)}" y="${ly}" text-anchor="middle" font-size="13" fill="${INK}" stroke="${PAPER}" stroke-width="3" paint-order="stroke">${esc(p.name)}<tspan class="at" font-size="11.5" fill="${FAINT}" dx="5">${p.at}</tspan></text>` +
-      `<circle cx="${x(p.s).toFixed(1)}" cy="${Y0}" r="6" fill="${PAPER}" stroke="${INK}" stroke-width="2.5"/>`;
-  }).join("");
-  const side = (y, t) => `<text x="${narrow ? X0 + 4 : 0}" y="${y}" font-size="14" fill="${INK}" class="caps" stroke="${PAPER}" stroke-width="3" paint-order="stroke">${t}</text>`;
-
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="The exit as a line with its stops. Above it, the park's width today by land cover; below it, only the shown proposals, on a wider scale; each proposed thing is a bubble near its distance along the exit.">
-    <defs>${patterns()}</defs><g transform="translate(0 ${Y0})">${parts.join("")}</g>
-    <line x1="${X0}" y1="${Y0}" x2="${X1}" y2="${Y0}" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>
-    ${xAxis}${yAxis}${stopMarks}${side(Y0 - GAP - 8, "Today")}${side(Y0 + GAP + 16, "Proposed")}</svg>`;
-}
-
-function lineKey(model) {
-  const st = model.streams;
-  const swatch = (s) => s.kind === "cover"
-    ? `<svg class="key" viewBox="0 0 16 16"><rect width="16" height="16" fill="${s.color ?? UNCLASSED}"/><rect width="16" height="16" fill="url(#tx-${s.key})"/></svg>`
-    : `<span class="key" style="background:${s.color}"></span>`;
-  const item = (s) => `<span class="item">${swatch(s)}${esc(s.label)}</span>`;
-  const seen = new Set();
-  const paths = st.proposed.filter((s) => s.shape === "line" && !seen.has(`${s.label}|${s.color}`) && seen.add(`${s.label}|${s.color}`));
-  const rm = (st.below ?? []).find((s) => s.kind === "removal");
-  return `<span class="caps">Today</span> ${st.today.map(item).join("")}` + (paths.length ? `<br><span class="caps">Proposed paths</span> ${paths.map(item).join("")}` : "") +
-    (rm ? `<br><span class="caps">Removals</span> <span class="item"><span class="key" style="background:${rm.color}"></span>ground that turns to grass</span>` : "");
-}
-
-// ---------- 2. the shortlist ----------
-
-function drawShortlist(model, park, W, page) {
-  const narrow = W < 720;
-  const AXIS = narrow ? Math.round(W * 0.3) : Math.min(700, Math.round(W * 0.6));
-  // one scale for every page, so a bar means the same on page 1 and on page 7
-  const mostFor = Math.max(2, ...model.ranked.map((g) => g.for));
-  const mostAgainst = Math.max(1, ...model.ranked.map((g) => g.against));
-  const UNIT = Math.min(64, (W - AXIS - 34) / mostFor, (narrow ? AXIS - 30 : 130) / mostAgainst);
-  const ROW = narrow ? 70 : 34;
-  const BAR = narrow ? 46 : 5;
-  const parts = [
-    `<text x="${AXIS - 8}" y="14" text-anchor="end" font-size="14" fill="${SOFT}" class="caps">against</text>`,
-    `<text x="${AXIS + 8}" y="14" font-size="14" fill="${SOFT}" class="caps">for</text>`,
-  ];
-  let y = 26;
-  for (const { item: g, rank: n } of page.rows) {
-    const backed = g.net >= park.config.winSupport;
-    const times = g.members.length > 1 ? `<tspan fill="${FAINT}" font-size="13"> ×${g.members.length}</tspan>` : "";
-    const tip = tipOf(g.name, where(g, park), votes(g.for, g.against));
-    parts.push(`<text x="18" y="${y + 18}" text-anchor="end" font-size="14" fill="${FAINT}">${n}</text>`);
-    if (narrow) {
-      const place = where(g, park);
-      const fits = Math.floor((W - 30) / 6.3);
-      parts.push(`<text x="28" y="${y + 18}" font-size="16" fill="${INK}">${esc(g.name)}${times}</text>`);
-      parts.push(`<text x="28" y="${y + 37}" font-size="13" fill="${FAINT}">${esc(place.length > fits ? `${place.slice(0, fits - 1)}…` : place)}</text>`);
-    } else {
-      parts.push(`<text x="30" y="${y + 18}" font-size="17" fill="${INK}">${esc(g.name)}${times}<tspan fill="${FAINT}" font-size="13.5" dx="10">${esc(where(g, park))}</tspan></text>`);
-    }
-    if (g.for) parts.push(`<rect x="${AXIS + 1}" y="${y + BAR}" width="${(g.for * UNIT - 1).toFixed(1)}" height="16" rx="2" fill="${SIENNA}" fill-opacity="${backed ? 1 : 0.45}" data-tip="${esc(tip)}"/>`);
-    if (g.against) parts.push(`<rect x="${(AXIS - g.against * UNIT).toFixed(1)}" y="${y + BAR}" width="${(g.against * UNIT - 1).toFixed(1)}" height="16" rx="2" fill="${FAINT}" fill-opacity="0.75" data-tip="${esc(tip)}"/>`);
-    parts.push(`<text x="${(AXIS + g.for * UNIT + 8).toFixed(1)}" y="${y + BAR + 13}" font-size="14" fill="${INK}">${g.for}</text>`);
-    if (g.against) parts.push(`<text x="${(AXIS - g.against * UNIT - 8).toFixed(1)}" y="${y + BAR + 13}" text-anchor="end" font-size="14" fill="${INK}">${g.against}</text>`);
-    y += ROW;
-  }
-  const H = y + 6;
-  if (!narrow) parts.push(`<line x1="${AXIS}" y1="22" x2="${AXIS}" y2="${H - 4}" stroke="${INK}" stroke-opacity="0.5" stroke-width="1"/>`);
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Proposals ${page.from} to ${page.to} of ${page.total} by the people behind them, with the people for and against each">${parts.join("")}</svg>`;
-}
-
-// ---------- 3. the themes ----------
-
-function drawThemes(model, park, W) {
-  const narrow = W < 720;
-  const SQ = 14;
-  const STEP = SQ + 3;
-  const LABEL = narrow ? 0 : 250;
-  const perLine = Math.max(6, Math.floor((W - LABEL - (narrow ? 0 : 170)) / STEP));
-  const parts = [];
-  let y = 6;
-  for (const t of model.themes) {
-    const n = t.items.length;
-    const summary = `${n} ${n === 1 ? "drawing" : "drawings"}, ${people(t.people)}`;
-    if (narrow) {
-      parts.push(`<text x="0" y="${y + 15}" font-size="16" fill="${INK}">${esc(t.label)}<tspan fill="${SOFT}" font-size="13.5" dx="8">${summary}</tspan></text>`);
-      y += 24;
-    } else {
-      parts.push(`<text x="${LABEL - 14}" y="${y + 15}" text-anchor="end" font-size="16" fill="${INK}">${esc(t.label)}</text>`);
-    }
-    t.items.forEach((it, k) => {
-      const sx = LABEL + (k % perLine) * STEP;
-      const sy = y + Math.floor(k / perLine) * STEP;
-      const style = it.net >= park.config.winSupport ? `fill="${SIENNA}"` : it.net === 1 ? `fill="${SIENNA}" fill-opacity="0.45"` : `fill="none" stroke="${FAINT}" stroke-width="1.2"`;
-      const place = it.at ? `${Math.round(it.at.s / 10) * 10} m along the ramp` : "off the ramp";
-      parts.push(`<rect x="${sx + 0.6}" y="${sy + 3.6}" width="${SQ - 1.2}" height="${SQ - 1.2}" rx="2" ${style} data-tip="${esc(tipOf(it.name, place, votes(it.votesFor.size, it.votesAgainst.size)))}"/>`);
-    });
-    const lines = Math.ceil(n / perLine);
-    if (!narrow) parts.push(`<text x="${LABEL + Math.min(n, perLine) * STEP + 10}" y="${y + 15}" font-size="14" fill="${SOFT}">${summary}</text>`);
-    y += lines * STEP + (narrow ? 14 : 11);
-  }
-  const H = y + 4;
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Every drawing on the map as a square, in rows by kind of idea">${parts.join("")}</svg>`;
-}
-
-// ---------- the page ----------
+const FIRST = 10; // rows shown before "Show all", in each list
 
 const $ = (id) => document.getElementById(id);
-let park = null;
-let lastJson = "";
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+let data = null; // personas.json: the four groups, their aliases, the sections, the kinds' labels, featured proposals
+let park = null; // charts/park.json
+let who = [];
+let at = [];
+let lastText = "";
 let lastSubs = null;
+let model = null;
 let lastGood = null;
-let source = 0;
-let finalMap = null; // the final map's module, once it has loaded
-let selection = null; // its answer: { rows, via, at }, or null while the stand-in shows
-let finalTried = 0;
-let groups = []; // the persona groups, the menu's top level
-let personas = []; // personas.json: who the page can be read for
-let enabled = []; // the ids of the personas on, kept in the address (#for=...)
-let shortPage = 0; // the page of the shortlist the reader is on; kept through every refresh
+const open = { top: false, types: false, offers: false }; // "Show all" per list
+let win = null; // the zoom window [a, b] in meters along the ramp
 
-/** Ask the final map which proposals it shows: its own function first, its snapshot second, else nothing. */
-async function askFinalMap() {
-  try {
-    finalMap ??= await import(`${FINAL}top-proposals.js?t=${Date.now()}`);
-    const r = await finalMap.topProposals();
-    const rows = Array.isArray(r) ? r : r?.rows;
-    if (Array.isArray(rows)) return { rows, via: "module", at: null };
-  } catch {
-    // not live yet, or its own read of the API was refused here (a local test server): try the snapshot
+/** A group's color: the file's color on the light paper; a lighter one of the same hue on the dark paper. */
+const dark = () => document.documentElement.dataset.theme === "dark";
+const colour = (p) => (dark() ? p.colourDark : p.colour);
+const P = (id) => data.personas.find((p) => p.id === id);
+const narrow = () => innerWidth < 640;
+const m2 = (a) => (a >= 100 ? Math.round(a / 10) * 10 : Math.round(a)).toLocaleString("en-US");
+
+function drawPicker() {
+  if (!$("who").querySelector(".chip")) {
+    $("who").innerHTML = data.personas.map((p) => `<button type="button" class="chip" data-who="${esc(p.id)}" aria-pressed="false"><span class="dot" aria-hidden="true"></span>${esc(p.name)}<span class="n"></span></button>`).join("");
+    $("where").innerHTML = data.sections.map((s) => `<button type="button" class="chip place" data-at="${esc(s.id)}" aria-pressed="false" title="${esc(s.long)}">${esc(s.name)}<span class="n"></span></button>`).join("");
+    $("members").innerHTML = data.personas.map((p) => `<p><b>${esc(p.name)}</b>: ${esc(p.members.join(", "))}.</p>`).join("");
   }
-  try {
-    const r = await fetch(`${FINAL}top-proposals.json`, { cache: "no-store" });
-    if (r.ok) {
-      const j = await r.json();
-      if (Array.isArray(j?.rows)) return { rows: j.rows, via: "snapshot", at: j.at ?? null };
+  for (const b of $("who").querySelectorAll(".chip")) {
+    b.style.setProperty("--c", colour(P(b.dataset.who)));
+    b.setAttribute("aria-pressed", String(who.includes(b.dataset.who)));
+  }
+  for (const b of $("where").querySelectorAll(".chip")) {
+    b.style.setProperty("--c", "var(--ink)");
+    b.setAttribute("aria-pressed", String(at.includes(b.dataset.at)));
+  }
+  if (model) { // proposals for that group in the places on; proposals in that place for the groups on
+    for (const b of $("who").querySelectorAll(".chip")) b.querySelector(".n").textContent = keep(model.groups, data, [b.dataset.who], at).length;
+    for (const b of $("where").querySelectorAll(".chip")) b.querySelector(".n").textContent = keep(model.groups, data, who, [b.dataset.at]).length;
+  }
+  $("tools").hidden = who.length === data.personas.length && at.length === data.sections.length;
+}
+
+const and = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} and ${xs.at(-1)}` : xs[0] ?? "");
+const plural = { walker: "walkers", gardener: "gardeners and nature lovers", "kids-and-play": "kids and players", other: "everyone else" };
+const more = (key, n, total) => {
+  $(`${key}-more`).hidden = total <= n && !open[key];
+  $(`${key}-all`).textContent = open[key] ? `Show the first ${FIRST}` : `Show all ${total}`;
+};
+
+// ---------- the rankings ----------
+function drawTop(groups) {
+  const ranked = rank(groups);
+  const shown = open.top ? ranked : ranked.slice(0, FIRST);
+  const most = Math.max(1, ...ranked.map((g) => Math.max(g.for, g.against)));
+  const bar = (n) => `<i style="width:${((n / most) * 100).toFixed(1)}%"></i>`;
+  $("top").tBodies[0].innerHTML = shown.map((g, i) => {
+    const sec = data.sections.find((s) => s.id === sectionOf(g, data.sections));
+    const times = g.members.length > 1 ? ` <span class="times">×${g.members.length}</span>` : "";
+    return `<tr><td class="rank">${i + 1}</td><td><a href="/map/?p=${encodeURIComponent(g.id)}">${esc(g.name)}</a>${times}<span class="at">${esc(sec.off ? sec.name : `${sec.name}: ${where(g, park)}`)}</span></td>` +
+      `<td class="votes" aria-label="${esc(voteWords(g.for, g.against))}"><div class="bars"><span class="against">${g.against ? `<b>${g.against}</b>${bar(g.against)}` : ""}</span><span class="for">${g.for ? `${bar(g.for)}<b>${g.for}</b>` : ""}</span></div></td></tr>`;
+  }).join("") || `<tr><td></td><td>Nothing here yet.</td><td></td></tr>`;
+  more("top", FIRST, ranked.length);
+}
+
+function drawTypes(items) {
+  const rows = byType(items, data.kinds);
+  const shown = open.types ? rows : rows.slice(0, FIRST);
+  const most = Math.max(1, ...rows.map((r) => r.for));
+  $("types").innerHTML = shown.map((r) => `<li><span>${esc(r.label)} <span class="n">${r.drawings} ${r.drawings === 1 ? "drawing" : "drawings"}</span></span>` +
+    `<span class="bar" title="${esc(voteWords(r.for, r.against))}"><i style="width:${((r.for / most) * 4.5).toFixed(2)}rem"></i>${r.for}</span></li>`).join("");
+  more("types", FIRST, rows.length);
+}
+
+function drawSquares(items) {
+  const rows = themes(items, park);
+  const tip = (it) => `${it.name}: ${voteWords(it.for, it.against)}`;
+  $("squares").innerHTML = rows.map((r) => `<div class="fam"><span>${esc(r.label)}</span><div class="boxes">` +
+    r.items.map((it) => `<a class="v${voteStep(it.for)}" href="/map/?p=${encodeURIComponent(it.id)}" title="${esc(tip(it))}" aria-label="${esc(tip(it))}"></a>`).join("") + `</div></div>`).join("");
+  $("shade-key").innerHTML = ["no one for it yet", "1 person for it", "2", "3", "4 or more"].map((t, i) => `<span><a class="v${i}" aria-hidden="true"></a>${t}</span>`).join("");
+  $("shade-key").classList.add("squares");
+}
+
+// ---------- the bubbles along the ramp ----------
+let along = null; // what the chart draws, kept between zoom drags
+let fullH = 0; // the chart's height for the whole ramp, for the filters on
+function drawAlong() {
+  const box = $("along");
+  const W = Math.max(300, box.clientWidth || 600);
+  const N = narrow();
+  const L = model.m.length;
+  win = win ? clampWindow(win[0], win[1], L) : [0, L];
+  const [a, b] = win;
+  const X0 = 6, X1 = W - 6;
+  const x = (s) => X0 + ((s - a) / (b - a)) * (X1 - X0);
+  const { bubbles, streams, off } = along;
+  const rMax = N ? 30 : 46;
+  const maxArea = Math.max(1, ...bubbles.map((q) => q.areaM2));
+  const mostB = Math.max(1, ...bubbles.map((q) => q.net));
+  const mostS = Math.max(1, ...streams.map((q) => q.net));
+  // streams above the line, one lane each, most votes nearest the line
+  const lane = lanes(streams);
+  const LANE = N ? 9 : 11;
+  const nLanes = Math.max(0, ...lane.values()) + (streams.length ? 1 : 0);
+  const lineY = 34 + nLanes * LANE + 8;
+  const parts = [];
+  // the line and its sections
+  const along0 = data.sections.filter((s) => !s.off);
+  for (const sec of along0) {
+    if (sec.s1 < a || sec.s0 > b) continue;
+    const x0 = Math.max(X0, x(sec.s0)), x1 = Math.min(X1, x(sec.s1));
+    parts.push(`<line x1="${x0.toFixed(1)}" y1="${lineY}" x2="${x1.toFixed(1)}" y2="${lineY}" stroke="${at.includes(sec.id) ? "var(--ink)" : "var(--hairline)"}" stroke-width="2"${at.includes(sec.id) ? "" : ' stroke-dasharray="3 3"'}/>`);
+    if (sec.s0 > a) parts.push(`<line x1="${x(sec.s0).toFixed(1)}" y1="${lineY - 5}" x2="${x(sec.s0).toFixed(1)}" y2="${lineY + 5}" stroke="var(--ink-faint)"/>`);
+    const w = x1 - x0, name = N || w < 160 ? sec.name : sec.long.split(":")[0];
+    if (w > name.length * 6.2) parts.push(`<text x="${((x0 + x1) / 2).toFixed(1)}" y="${lineY + 17}" font-size="${N ? 11 : 12}" fill="var(--ink-faint)" text-anchor="middle">${esc(name)}</text>`);
+  }
+  parts.push(`<text x="${X0}" y="12" font-size="11" fill="var(--ink-faint)">${Math.round(a)} m${a < 1 ? ", Henry Hudson Parkway" : ""}</text><text x="${X1}" y="12" font-size="11" fill="var(--ink-faint)" text-anchor="end">${Math.round(b)} m${b > L - 1 ? ", Saint Clair Place" : ""}</text>`);
+  // streams
+  for (const st of [...streams].sort((p, q) => lane.get(q.id) - lane.get(p.id))) {
+    if (st.s1 < a || st.s > b) continue;
+    const y = lineY - 10 - lane.get(st.id) * LANE;
+    const x0 = Math.max(X0, x(st.s)), x1 = Math.max(x0 + 3, Math.min(X1, x(st.s1)));
+    const th = Math.max(2.5, Math.min(LANE - 3, st.widthM * 0.9));
+    parts.push(`<line class="st" data-id="${esc(st.id)}" x1="${x0.toFixed(1)}" y1="${y}" x2="${x1.toFixed(1)}" y2="${y}" stroke="${colour(st)}" stroke-opacity="${bubbleOpacity(st.net, mostS).toFixed(2)}" stroke-width="${th.toFixed(1)}" stroke-linecap="round"/>`);
+  }
+  // bubbles below the line: biggest placed first, each at its own place along, dropped until it touches nothing
+  const shown = bubbles.filter((q) => q.mid >= a - 1 && q.mid <= b + 1).map((q) => ({ ...q, r: radius(q.areaM2, maxArea, rMax), cx: x(q.mid) }));
+  const placed = [];
+  const top0 = lineY + 26;
+  for (const q of [...shown].sort((p, r) => r.r - p.r)) {
+    let y = top0 + q.r;
+    for (let guard = 0; guard < 400; guard++) {
+      const hit = placed.find((o) => Math.hypot(o.cx - q.cx, o.cy - y) < o.r + q.r + 1.5);
+      if (!hit) break;
+      y = hit.cy + Math.sqrt(Math.max(0, (hit.r + q.r + 1.6) ** 2 - (hit.cx - q.cx) ** 2)) + 0.5;
     }
-  } catch {
-    // no snapshot either
+    q.cy = y;
+    placed.push(q);
   }
-  return null;
+  const named = labelled(shown, a, b, N ? 4 : 8);
+  for (const q of placed) parts.push(`<circle class="b" data-id="${esc(q.id)}" cx="${q.cx.toFixed(1)}" cy="${q.cy.toFixed(1)}" r="${q.r.toFixed(1)}" fill="${colour(q)}" fill-opacity="${bubbleOpacity(q.net, mostB).toFixed(2)}" stroke="${colour(q)}" stroke-width="1"/>`);
+  const boxes = []; // labels already written: a label that would overlap one is left to hover and tap
+  for (const q of placed.filter((p) => named.has(p.id)).sort((p, r) => r.r - p.r)) {
+    const tw = q.name.length * 6.4 + 6;
+    const fits = q.r * 2 > tw;
+    const y = fits ? q.cy + 4 : q.cy + q.r + 13;
+    const bx = { x0: q.cx - tw / 2, x1: q.cx + tw / 2, y0: y - 12, y1: y + 3 };
+    if (bx.x0 < 0 || bx.x1 > W || boxes.some((o) => bx.x0 < o.x1 && o.x0 < bx.x1 && bx.y0 < o.y1 && o.y0 < bx.y1)) continue;
+    boxes.push(bx);
+    parts.push(`<text x="${q.cx.toFixed(1)}" y="${y.toFixed(1)}" font-size="12" text-anchor="middle" fill="var(--ink)" stroke="var(--paper)" stroke-width="3" paint-order="stroke" pointer-events="none">${esc(q.name)}</text>`);
+  }
+  let H = Math.max(top0 + 40, ...placed.map((q) => q.cy + q.r + (named.has(q.id) ? 20 : 6)));
+  // while zoomed the chart keeps the height it has for the whole ramp, so the zoom window under it stays under the finger
+  if (a <= 0.5 && b >= L - 0.5) fullH = H; else H = Math.max(H, fullH);
+  const tip = $("tip");
+  box.innerHTML = "";
+  box.insertAdjacentHTML("beforeend", `<svg viewBox="0 0 ${W} ${H.toFixed(0)}" width="${W}" height="${H.toFixed(0)}" role="img" aria-label="${esc(`${placed.length} proposed things and ${streams.length} voted paths along the ramp, from ${Math.round(a)} to ${Math.round(b)} meters`)}">${parts.join("")}</svg>`);
+  box.appendChild(tip);
+  const offLine = off ? `${off} ${off === 1 ? "proposal stands" : "proposals stand"} off the ramp: in the rankings, not drawn here.` : "";
+  $("zoom-tools").innerHTML = `${a > 0.5 || b < L - 0.5 ? `Showing ${Math.round(a)} to ${Math.round(b)} m.<button type="button" id="zoom-all">Whole ramp</button>` : "Showing the whole ramp."} ${offLine}`;
+  drawZoom();
 }
 
-/** The personas on, in words: "Dog walker", "Dog walker and Climber", "3 personas", or nothing. */
-function forWords() {
-  const names = personas.filter((p) => enabled.includes(p.id)).map((p) => p.name);
-  return names.length > 3 ? `${names.length} personas` : names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0] ?? "";
+/** The tip for a bubble or a stream, at the pointer. */
+function showTip(el, e) {
+  const id = el.dataset.id;
+  const q = [...along.bubbles, ...along.streams].find((x) => x.id === id);
+  if (!q) return;
+  const tip = $("tip");
+  const sec = data.sections.find((s) => s.id === sectionOf(q, data.sections));
+  tip.innerHTML = `<b>${esc(q.name)}${q.members.length > 1 ? ` ×${q.members.length}` : ""}</b><span>${esc(P(q.groupId).name)} · ${esc(sec.name)}: ${esc(where(q, park))}<br>` +
+    `${q.kind === "point" ? `about ${m2(q.areaM2)} m², ` : q.widthM ? `${m2(q.widthM)} m wide, ` : ""}${esc(voteWords(q.for, q.against))}</span>`;
+  tip.hidden = false;
+  const box = $("along").getBoundingClientRect();
+  const px = e.clientX - box.left, py = e.clientY - box.top;
+  const w = tip.offsetWidth;
+  tip.style.left = `${Math.max(0, Math.min(box.width - w, px - w / 2))}px`;
+  tip.style.top = `${py + 14}px`;
 }
+
+// the zoom window: an overview of the whole ramp under the chart, its window dragged (pan) or its handles (resize)
+function drawZoom() {
+  const W = Math.max(300, $("zoom").clientWidth || 600);
+  const L = model.m.length;
+  const X0 = 6, X1 = W - 6, H = 34;
+  const x = (s) => X0 + (s / L) * (X1 - X0);
+  const [a, b] = win;
+  const ticks = [...along.streams.map((q) => `<line x1="${x(q.s).toFixed(1)}" y1="11" x2="${Math.max(x(q.s) + 1, x(q.s1)).toFixed(1)}" y2="11" stroke="var(--ink-faint)" stroke-width="2"/>`),
+    ...along.bubbles.map((q) => `<circle cx="${x(q.mid).toFixed(1)}" cy="22" r="2" fill="var(--ink-faint)"/>`)].join("");
+  $("zoom").innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">` +
+    `<rect class="track" x="${X0}" y="2" width="${X1 - X0}" height="${H - 4}" fill="var(--paper-deep)"/>${ticks}` +
+    `<g class="win" tabindex="0" role="slider" aria-label="Zoom window along the ramp, in meters; arrow keys move it, plus and minus zoom" aria-valuemin="0" aria-valuemax="${Math.round(L)}" aria-valuenow="${Math.round(a)}" aria-valuetext="${Math.round(a)} to ${Math.round(b)} meters">` +
+    `<rect class="frame" x="${x(a).toFixed(1)}" y="1" width="${(x(b) - x(a)).toFixed(1)}" height="${H - 2}" fill="var(--rule)" fill-opacity="0.1" stroke="var(--rule)" stroke-width="2"/></g>` +
+    `<rect class="handle" data-end="a" x="${(x(a) - 6).toFixed(1)}" y="0" width="12" height="${H}" fill="transparent"/><rect x="${(x(a) - 2).toFixed(1)}" y="6" width="4" height="${H - 12}" rx="1" fill="var(--rule)" pointer-events="none"/>` +
+    `<rect class="handle" data-end="b" x="${(x(b) - 6).toFixed(1)}" y="0" width="12" height="${H}" fill="transparent"/><rect x="${(x(b) - 2).toFixed(1)}" y="6" width="4" height="${H - 12}" rx="1" fill="var(--rule)" pointer-events="none"/></svg>`;
+}
+
+function zoomEvents() {
+  const z = $("zoom");
+  let drag = null;
+  const toS = (e) => {
+    const r = z.getBoundingClientRect();
+    return ((e.clientX - r.left - 6) / (r.width - 12)) * model.m.length;
+  };
+  let pending = false;
+  const redraw = () => { if (!pending) { pending = true; requestAnimationFrame(() => { pending = false; drawAlong(); }); } };
+  z.addEventListener("pointerdown", (e) => {
+    if (!model) return;
+    const s = toS(e);
+    const end = e.target.closest(".handle")?.dataset.end;
+    const inside = s >= win[0] && s <= win[1];
+    drag = { end, from: s, win: [...win] };
+    if (!end && !inside) { const w = win[1] - win[0]; win = clampWindow(s - w / 2, s + w / 2, model.m.length); drag.win = [...win]; redraw(); }
+    z.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  z.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    const d = toS(e) - drag.from, L = model.m.length, [a, b] = drag.win;
+    if (drag.end === "a") win = clampWindow(Math.min(a + d, b - 100), b, L);
+    else if (drag.end === "b") win = clampWindow(a, Math.max(b + d, a + 100), L);
+    else { const w = b - a; const a1 = Math.max(0, Math.min(L - w, a + d)); win = [a1, a1 + w]; }
+    redraw();
+  });
+  const stop = () => { drag = null; };
+  z.addEventListener("pointerup", stop);
+  z.addEventListener("pointercancel", stop);
+  z.addEventListener("keydown", (e) => {
+    if (!model || !e.target.closest(".win")) return;
+    const L = model.m.length, [a, b] = win, w = b - a, step = Math.max(10, w / 10);
+    if (e.key === "ArrowLeft") win = clampWindow(a - step, b - step, L);
+    else if (e.key === "ArrowRight") win = clampWindow(a + step, b + step, L);
+    else if (e.key === "+" || e.key === "=") win = clampWindow(a + w / 4, b - w / 4, L);
+    else if (e.key === "-") win = clampWindow(a - w / 2, b + w / 2, L);
+    else return;
+    e.preventDefault();
+    drawAlong();
+    z.querySelector(".win")?.focus();
+  });
+}
+
+// ---------- what each group gets (round 10's list) ----------
+function drawOffers(inAt) {
+  const rows = offers(inAt, data.personas, who, data.kinds, data.featured);
+  const shown = open.offers ? rows : rows.slice(0, FIRST);
+  $("offers").innerHTML = shown.map((r) => {
+    const g = r.group;
+    const star = r.featured.length ? P(r.featured[0]) : null;
+    const times = g.members.length > 1 ? ` <span class="times">×${g.members.length}</span>` : "";
+    const sec = data.sections.find((s) => s.id === sectionOf(g, data.sections));
+    return `<li${star ? ` class="featured" style="--c:${colour(star)};--c-text:${colour(star)}"` : ""}>` +
+      (star ? `<span class="new">${esc(data.featuredNote?.[star.id] ?? "New")}</span>` : "") +
+      `<h3><a href="/map/?p=${encodeURIComponent(g.id)}">${esc(g.name)}</a>${times}</h3>` +
+      `<div class="where">${esc(sec.off ? sec.name : `${sec.name}: ${where(g, park)}`)}</div>` +
+      r.serves.map((s) => {
+        const p = P(s.id);
+        return `<div class="for" style="--c:${colour(p)};--c-text:${colour(p)}"><span class="mark" aria-hidden="true"></span><b>${esc(p.name)}</b>: ${esc(lower(s.line))}</div>`;
+      }).join("") +
+      `<div class="votes">${voteWords(g.for, g.against)}</div></li>`;
+  }).join("");
+  $("more").hidden = rows.length <= FIRST;
+  $("show-all").textContent = open.offers ? `Show the first ${FIRST}` : `Show all ${rows.length}`;
+  return rows.length;
+}
+const lower = (t) => (/^[A-Z](?:[a-z]| )/.test(t) && !/^(Citi|Metro|Saint|Spherical)/.test(t) ? t.charAt(0).toLowerCase() + t.slice(1) : t);
 
 function render(subs) {
-  const view = personas.length ? { personas, enabled } : null;
-  const model = build(subs, park, selection, view);
-  const st = model.streams;
-  const c = model.counts;
-  const W = $("shortlist").clientWidth || 360;
-  const who = forWords();
-  $("title").textContent = view ? (who ? `Exit 12N: what the map says for ${who}` : "Exit 12N: no one chosen") : "Exit 12N: what the map says so far";
-  $("counts").textContent = view
-    ? (who ? `${c.drawings} of ${c.allDrawings} drawings, from ${people(c.people)}` : `${c.allDrawings} drawings`)
-    : `${c.drawings} drawings and ${c.votes} votes from ${people(c.people)}`;
-  drawPersonas(subs);
-
-  const paths = st.proposed.length;
-  const ob = model.objects;
-  const parts = [
-    paths ? `${paths} proposed ${paths === 1 ? "path" : "paths"} would take ${m2(st.takenM2)} of the park's ${m2(st.parkAreaM2)}` : "",
-    ob.proposed.length ? `${ob.proposed.length} proposed ${ob.proposed.length === 1 ? "thing" : "things"}` : "",
-    st.removals.length ? `${st.removals.length} ${st.removals.length === 1 ? "removal turns" : "removals turn"} ${m2(st.turnedToGrassM2)} to grass` : "",
-  ].filter(Boolean);
-  $("line-lead").textContent = parts.length ? `${cap(parts.join("; "))}.` : who ? `Nothing for ${who} is on the line yet.` : "Choose a persona above to see what the map says for them.";
-  $("line").innerHTML = drawLine(model, park, $("line").clientWidth || 360);
-  $("line-key").innerHTML = lineKey(model);
-  $("line-shown").textContent =
-    (model.chosen.standIn
-      ? "Shown: every proposal with more people for it than against. "
-      : `Shown: the final map's top proposals${model.chosen.via === "snapshot" && model.chosen.at ? `, as of ${new Date(model.chosen.at).toLocaleString()}` : ""}. `) +
-    (ob.outside ? `${ob.outside} of ${ob.proposed.length} things stand outside the park, placed by their distance along the exit.` : "");
-
-  const lead = model.ranked.slice(0, 3).map((g) => g.name);
-  const contested = model.ranked.filter((g) => g.against > 0).length;
-  $("shortlist-lead").textContent = lead.length
-    ? `Out front: ${lead.join(", ")}.${contested ? ` ${contested} of ${c.proposals} have someone against.` : ""}`
-    : who ? `No one has drawn anything yet that is for ${who}.` : "Choose a persona above to see what the map says for them.";
-  const page = pageOf(model.ranked, shortPage);
-  shortPage = page.page; // a list that got shorter leaves the reader on its last page
-  $("shortlist").innerHTML = lead.length ? drawShortlist(model, park, W, page) : "";
-  $("page-at").textContent = lead.length ? `${page.from} to ${page.to} of ${page.total}` : "";
-  $("page-prev").disabled = page.page === 0;
-  $("page-next").disabled = page.page >= page.pages - 1;
-
-  const first = model.themes[0];
-  $("themes-lead").textContent = themesLead(model.themes);
-  $("themes").innerHTML = first ? drawThemes(model, park, W) : "";
-  $("rules").textContent = `Drawings of the same thing within ${park.config.reachM} m along the ramp are one proposal.`;
+  if (subs) model = build(subs, park);
+  const groups = keep(model.groups, data, who, at);
+  const items = keep(model.items, data, who, at);
+  drawPicker();
+  const whoWords = who.length === data.personas.length ? "walkers, gardeners, kids and everyone else" : and(who.map((id) => plural[id] ?? P(id).name));
+  const places = data.sections.filter((s) => at.includes(s.id)).map((s) => (s.off ? "off the ramp" : `at the ${s.name.toLowerCase()}`));
+  const atWords = at.length === data.sections.length ? "on and around the ramp" : and(places);
+  const n = groups.length;
+  $("summary").textContent = !who.length ? "Switch on someone above to see what the map offers them."
+    : !at.length ? "Switch on a part of the ramp above."
+      : n ? `${n} ${n === 1 ? "proposal serves" : "proposals serve"} ${whoWords} ${atWords}, from ${items.length} ${items.length === 1 ? "drawing" : "drawings"}.`
+        : `Nothing on the map serves ${whoWords} ${atWords} yet.`;
+  drawTop(groups);
+  drawTypes(items);
+  drawSquares(items);
+  along = alongRamp(model.groups, data, who, at);
+  if (win && (win[0] > 0.5 || win[1] < model.m.length - 0.5)) { const keepWin = win; win = null; drawAlong(); win = keepWin; }
+  drawAlong();
+  drawOffers(model.groups.filter((g) => at.includes(sectionOf(g, data.sections))));
 }
 
-let refreshing = false; // one rebuild at a time: a check that finds the last one still running is skipped (Eric, 2026-11-22 14:40)
+let refreshing = false; // one fetch at a time, as the charts do
 async function refresh() {
   if (refreshing) return;
   refreshing = true;
   try {
-    let text = null;
-    let error = null;
-    for (let k = 0; k < SOURCES.length && text === null; k++) {
-      const i = (source + k) % SOURCES.length;
+    let text = null, error = null;
+    for (const src of SOURCES) {
       try {
-        const r = await fetch(SOURCES[i], { cache: "no-store" });
+        const r = await fetch(src, { cache: "no-store" });
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         text = await r.text();
-        source = i;
-      } catch (e) {
-        error = e;
-      }
+        break;
+      } catch (e) { error = e; }
     }
     if (text === null) throw error;
     const subs = JSON.parse(text);
     if (!Array.isArray(subs)) throw new Error("not a list");
     lastGood = new Date();
-    const changed = text !== lastJson;
-    // the final map's selection follows the same data: ask again when the data changed, or, while it has never
-    // answered, every few minutes
-    if ((selection && changed) || (!selection && Date.now() - finalTried > FINAL_RETRY_S * 1000)) {
-      finalTried = Date.now();
-      const next = await askFinalMap();
-      const was = JSON.stringify(selection?.rows?.map((r) => [r.id, r.votesFor, r.votesAgainst]));
-      const now = JSON.stringify(next?.rows?.map((r) => [r.id, r.votesFor, r.votesAgainst]));
-      if (next || !selection) selection = next ?? selection;
-      if (was !== now) lastJson = "";
-    }
-    if (text !== lastJson) {
-      lastJson = text;
-      lastSubs = subs;
-      render(subs);
-    }
-    $("status").textContent = `Live. Last checked ${lastGood.toLocaleTimeString()}; checks every ${REFRESH_S} seconds.`;
+    if (text !== lastText) { lastText = text; lastSubs = subs; render(subs); }
+    $("status").textContent = `Live. Last checked ${lastGood.toLocaleTimeString("en-US")}; checks every ${REFRESH_S} seconds.`;
     $("status").classList.remove("stale");
   } catch (e) {
-    $("status").textContent = lastGood
-      ? `The live data did not answer just now (${e.message}). Showing what it said at ${lastGood.toLocaleTimeString()}; still trying every ${REFRESH_S} seconds.`
-      : `The live data is not answering (${e.message}). Trying again every ${REFRESH_S} seconds.`;
+    $("status").textContent = lastGood ? `The live data did not answer just now. Showing what it said at ${lastGood.toLocaleTimeString("en-US")}.` : `The live data is not answering (${e.message}). Trying again every ${REFRESH_S} seconds.`;
     $("status").classList.add("stale");
-  } finally {
-    refreshing = false;
-  }
+  } finally { refreshing = false; }
 }
 
-/** What a mark is, shown on hover with a mouse and on a tap with a finger. */
-function labels() {
-  const box = $("tip");
-  const show = (e) => {
-    const t = e.target instanceof Element ? e.target.closest("[data-tip]") : null;
-    if (!t) {
-      box.hidden = true;
-      return;
-    }
-    const [head, ...rest] = t.getAttribute("data-tip").split("|");
-    box.innerHTML = `<strong>${esc(head)}</strong>${rest.map((l) => `<br>${esc(l)}`).join("")}`;
-    box.hidden = false;
-    const bw = box.offsetWidth;
-    box.style.left = `${Math.max(8, Math.min(document.documentElement.clientWidth - bw - 8, e.clientX + 14)) + window.scrollX}px`;
-    box.style.top = `${e.clientY + 16 + window.scrollY}px`;
-  };
-  document.addEventListener("pointermove", (e) => e.pointerType === "mouse" && show(e));
-  document.addEventListener("click", show);
+function set(nextWho, nextAt) {
+  who = data.personas.filter((p) => nextWho.includes(p.id)).map((p) => p.id);
+  at = data.sections.filter((s) => nextAt.includes(s.id)).map((s) => s.id);
+  open.top = open.types = open.offers = false;
+  history.replaceState(null, "", formatHash(who, at, data.personas, data.sections) || location.pathname + location.search);
+  if (model) render();
+  else drawPicker();
 }
-
-/** Previous and Next under the shortlist: real buttons, so a tap, a click and the keyboard all work. */
-function pager() {
-  const turn = (by) => () => {
-    shortPage += by;
-    if (lastSubs) render(lastSubs);
-  };
-  $("page-prev").addEventListener("click", turn(-1));
-  $("page-next").addEventListener("click", turn(1));
-}
-
-
-/** The picker and the toggles: switch to one persona, or turn each on or off. Every change goes to the address, so a
- *  link keeps the view, and redraws from the data already in hand. */
-function drawPersonas(subs) {
-  const n = (p) => forPersonas(subs, personas, [p.id]).length; // drawings that serve each persona, for the reader to choose by
-  $("who").hidden = !personas.length;
-  if (!personas.length) return;
-  const select = $("persona");
-  const list = $("persona-list");
-  const byGroup = groups.map((g) => ({ ...g, members: personas.filter((p) => p.group === g.id) })).filter((g) => g.members.length);
-  // built once, a group at a time; after that only updated in place, so a toggle keeps the keyboard's place and a refresh does not disturb it
-  if (!list.querySelector("input")) {
-    select.innerHTML = `<option value="" id="persona-many"></option>` +
-      byGroup.map((g) => `<optgroup label="${esc(g.label)}">${g.members.map((p) => `<option value="${esc(p.id)}"></option>`).join("")}</optgroup>`).join("");
-    list.innerHTML = byGroup.map((g) => `<p class="g">${esc(g.label)}</p>` +
-      g.members.map((p) => `<label><input type="checkbox" value="${esc(p.id)}">${esc(p.name)} <span class="n"></span></label>`).join("")).join("");
-  }
-  const one = enabled.length === 1 ? enabled[0] : "";
-  const many = $("persona-many");
-  many.textContent = enabled.length ? `${enabled.length} personas` : "No one";
-  many.hidden = enabled.length === 1;
-  const byId = new Map(personas.map((p) => [p.id, p]));
-  for (const o of select.querySelectorAll("option[value]:not([value=''])")) o.textContent = `${byId.get(o.value).name} (${n(byId.get(o.value))})`;
-  for (const box of list.querySelectorAll("input")) {
-    box.checked = enabled.includes(box.value);
-    box.parentElement.querySelector(".n").textContent = n(byId.get(box.value));
-  }
-  select.value = one;
-  const on = personas.filter((p) => enabled.includes(p.id));
-  $("persona-who").textContent = on.length === 1 ? (on[0].who ?? on[0].description ?? "") : "";
-  if (enabled.length > 1) $("persona-several").open = true;
-}
-
-function setPersonas(ids) {
-  enabled = personas.filter((p) => ids.includes(p.id)).map((p) => p.id);
-  shortPage = 0;
-  history.replaceState(null, "", personaHash(enabled, personas));
-  if (lastSubs) render(lastSubs);
-}
-
-function personaControls() {
-  $("persona").addEventListener("change", (e) => setPersonas(e.target.value ? [e.target.value] : []));
-  $("persona-prev").addEventListener("click", () => setPersonas([nextPersona(enabled, personas, -1)]));
-  $("persona-next").addEventListener("click", () => setPersonas([nextPersona(enabled, personas, 1)]));
-  $("persona-list").addEventListener("change", (e) => {
-    const id = e.target.value;
-    setPersonas(e.target.checked ? [...enabled, id] : enabled.filter((x) => x !== id));
-  });
-  window.addEventListener("hashchange", () => {
-    enabled = parsePersonaHash(location.hash, personas);
-    if (lastSubs) render(lastSubs);
-  });
-}
+const toggle = (list, id) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
+const fromHash = () => ({ who, where: at } = parseHash(location.hash, data.personas, data.sections, data.aliases));
 
 async function start() {
-  park = await (await fetch("park.json")).json();
-  try {
-    const j = await (await fetch("personas.json")).json();
-    personas = (Array.isArray(j) ? j : j.personas ?? []).filter((p) => p?.id && Array.isArray(p.kinds));
-    groups = j.groups ?? [{ id: undefined, label: "Personas" }];
-  } catch {
-    personas = []; // no persona list: the page shows everything, as before
-  }
-  enabled = parsePersonaHash(location.hash, personas);
-  labels();
-  pager();
-  personaControls();
+  [data, park] = await Promise.all([fetch("personas.json").then((r) => r.json()), fetch("charts/park.json").then((r) => r.json())]);
+  fromHash();
+  drawPicker();
+  $("pick").addEventListener("click", (e) => {
+    const chip = e.target.closest(".chip");
+    if (chip?.dataset.who) set(toggle(who, chip.dataset.who), at);
+    else if (chip?.dataset.at) set(who, toggle(at, chip.dataset.at));
+    else if (e.target.id === "everything") set(data.personas.map((p) => p.id), data.sections.map((s) => s.id));
+  });
+  for (const key of ["top", "types"]) $(`${key}-all`).addEventListener("click", () => { open[key] = !open[key]; render(); });
+  $("show-all").addEventListener("click", () => { open.offers = !open.offers; render(); });
+  $("zoom-tools").addEventListener("click", (e) => { if (e.target.id === "zoom-all") { win = null; drawAlong(); } });
+  // hover (a mouse) or tap (a finger) names a bubble or a stream
+  const chart = $("along");
+  chart.addEventListener("pointerover", (e) => { const el = e.target.closest(".b, .st"); if (el && e.pointerType === "mouse") showTip(el, e); });
+  chart.addEventListener("pointermove", (e) => { const el = e.target.closest(".b, .st"); if (el && e.pointerType === "mouse") showTip(el, e); });
+  chart.addEventListener("pointerout", (e) => { if (e.pointerType === "mouse" && e.target.closest(".b, .st")) $("tip").hidden = true; });
+  chart.addEventListener("click", (e) => { const el = e.target.closest(".b, .st"); if (el) showTip(el, e); else $("tip").hidden = true; });
+  zoomEvents();
+  window.addEventListener("hashchange", () => { fromHash(); if (model) render(); });
+  // the theme toggle changes the colors (a lighter one of each on the dark paper)
+  new MutationObserver(() => model && render()).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  let width = innerWidth;
+  addEventListener("resize", () => { if (innerWidth !== width && model) { width = innerWidth; render(); } });
   await refresh();
   setInterval(refresh, REFRESH_S * 1000);
-  let width = window.innerWidth;
-  window.addEventListener("resize", () => {
-    if (window.innerWidth !== width && lastSubs) {
-      width = window.innerWidth;
-      render(lastSubs);
-    }
-  });
 }
-
 start();

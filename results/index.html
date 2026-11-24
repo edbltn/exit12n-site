@@ -3,107 +3,255 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Exit 12N results</title>
-<meta name="description" content="What the Exit 12N map says so far: the proposals and votes, live.">
-<link rel="icon" href="logo.png">
+<title>Results: Exit 12N</title>
+<meta name="description" content="The Exit 12N proposals ranked by votes, where the changes went, and every proposal along the ramp. Live.">
+<link rel="canonical" href="https://exit12n.org/results/">
+<meta property="og:title" content="Results: Exit 12N">
+<meta property="og:description" content="The Exit 12N proposals ranked by votes, and every proposal along the ramp. Live.">
+<meta property="og:url" content="https://exit12n.org/results/">
+<link rel="preload" href="/style/fonts/dm-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style/site.css?v=20261124g">
+<meta name="theme-color" content="#ffffff">
+<meta name="color-scheme" content="light">
+<script>
+// Light by default; a reader's own choice (the toggle, top right) is remembered in this browser and applied before first paint.
+(function () {
+  var theme = 'light';
+  try { if (localStorage.getItem('sh-theme') === 'dark') theme = 'dark'; } catch (e) {}
+  document.documentElement.dataset.theme = theme;
+  if (theme === 'dark') {
+    document.querySelector('meta[name="theme-color"]').content = '#0f0f16';
+    document.querySelector('meta[name="color-scheme"]').content = 'dark';
+  }
+})();
+</script>
+<link rel="icon" href="/style/brand/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/style/brand/favicon-48.png" sizes="48x48" type="image/png">
+<link rel="icon" href="/style/brand/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/style/brand/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/style/brand/apple-touch-icon.png">
 <style>
-@font-face { font-family: "LM Roman 12"; src: url("fonts/lmroman12-regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
-@font-face { font-family: "LM Roman 12"; src: url("fonts/lmroman12-italic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
-@font-face { font-family: "LM Roman 12"; src: url("fonts/lmroman12-bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
-:root {
-  --paper: #faf3e5; --ink: #1b1813; --ink-soft: #4f4a40; --ink-faint: #7a7366; --sienna: #a86b3c;
-  --hairline: rgba(27, 24, 19, 0.22);
-  --serif: "LM Roman 12", "CMU Serif", "Latin Modern Roman", Georgia, "Times New Roman", serif;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html { -webkit-text-size-adjust: 100%; }
-body { background: var(--paper); color: var(--ink); font-family: var(--serif); font-size: 1.125rem; line-height: 1.55; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
-main { max-width: 1228px; margin: 0 auto; padding: 1.4rem 24px 5rem; }
-header a { display: inline-flex; align-items: center; gap: 0.7rem; color: inherit; text-decoration: none; }
-header a:hover span, header a:focus-visible span { text-decoration: underline; text-underline-offset: 0.2em; }
-header a:focus-visible, .pager button:focus-visible { outline: 2px solid var(--sienna); outline-offset: 3px; }
-header img { width: 44px; height: 44px; }
-header span { font-variant-caps: small-caps; letter-spacing: 0.04em; color: var(--ink-soft); }
-h1 { font-size: 2.3rem; font-weight: 400; line-height: 1.1; margin-top: 1.5rem; }
-h2 { font-size: 1.5rem; font-weight: 400; margin-top: 3.6rem; }
-h2 .n { color: var(--ink-faint); margin-right: 0.45em; }
-p { max-width: 72ch; }
-.meta { color: var(--ink-soft); margin-top: 0.5rem; }
-.stale { color: var(--sienna); }
-.lead { margin: 0.45rem 0 1.3rem; }
-.note { color: var(--ink-soft); font-size: 0.95rem; margin-top: 1rem; }
-.chart { overflow: hidden; }
-svg { display: block; font-family: var(--serif); font-variant-numeric: lining-nums tabular-nums; }
-.caps { font-variant-caps: small-caps; letter-spacing: 0.05em; }
-svg [data-tip] { cursor: default; }
-.item { white-space: nowrap; margin-right: 0.9em; }
-.key { display: inline-block; width: 0.85em; height: 0.85em; border-radius: 2px; vertical-align: -0.08em; margin-right: 0.3em; }
-p .key { margin-left: 0.9em; }
-p .key:first-child { margin-left: 0; }
-.pager { display: flex; align-items: center; gap: 1.1rem; margin-top: 0.9rem; font-size: 1rem; color: var(--ink-soft); font-variant-numeric: lining-nums tabular-nums; }
-.pager button { font: inherit; color: var(--ink); background: none; border: 1px solid var(--hairline); border-radius: 3px; padding: 0.3rem 0.9rem; cursor: pointer; }
-.pager button:disabled { color: var(--ink-faint); opacity: 0.5; cursor: default; }
-.who { margin-top: 1.4rem; }
-.who label, .who summary { color: var(--ink-soft); }
-.who select, .who button { font: inherit; font-size: 1rem; color: var(--ink); background: var(--paper); border: 1px solid var(--hairline); border-radius: 3px; padding: 0.3rem 0.7rem; cursor: pointer; }
-.who select { max-width: 100%; }
-.who button { padding: 0.3rem 0.9rem; margin-left: 0.3rem; }
-.who select:focus-visible, .who button:focus-visible, .who summary:focus-visible, .who input:focus-visible { outline: 2px solid var(--sienna); outline-offset: 3px; }
-.who summary { cursor: pointer; margin-top: 0.8rem; width: fit-content; }
-#persona-list { columns: 3 15rem; column-gap: 1.6rem; margin-top: 0.6rem; font-size: 1rem; }
-#persona-list label { display: block; break-inside: avoid; padding: 0.15rem 0; cursor: pointer; color: var(--ink); }
-#persona-list input { accent-color: var(--sienna); margin-right: 0.5em; }
-#persona-list .g { color: var(--ink-faint); font-variant-caps: small-caps; letter-spacing: 0.05em; margin: 0.7rem 0 0.1rem; break-after: avoid; }
-#persona-list .g:first-child { margin-top: 0; }
-#persona-list .n { color: var(--ink-faint); }
-details.how { margin-top: 1rem; }
-details.how summary { cursor: pointer; color: var(--ink-soft); font-size: 0.95rem; width: fit-content; }
-details.how summary:focus-visible { outline: 2px solid var(--sienna); outline-offset: 3px; }
-.empty { color: var(--ink-soft); margin: 0.6rem 0; }
-#tip { position: absolute; z-index: 5; max-width: min(22rem, 90vw); background: var(--paper); border: 1px solid var(--hairline); padding: 0.4rem 0.6rem; font-size: 0.95rem; line-height: 1.35; pointer-events: none; }
-#tip strong { font-weight: 700; }
-@media (max-width: 720px) {
-  main { padding: 1rem 16px 4rem; }
-  h1 { font-size: 1.8rem; }
-  h2 { margin-top: 2.8rem; }
-}
+/* the persona interactive; everything else is the site's own look (/style/site.css) */
+.filters { margin: 0 0 1.6rem; }
+.filter { border: 0; padding: 0; margin: 0 0 1rem; min-width: 0; }
+.filter legend { padding: 0; margin-bottom: 0.45rem; font-size: var(--fs-small); font-weight: 700; color: var(--ink-soft); }
+.filter .chips { display: flex; flex-wrap: wrap; gap: 0.45rem 0.5rem; }
+.chip .n { color: var(--ink-faint); margin-left: 0.35rem; font-variant-numeric: lining-nums; }
+.chip.place .dot { display: none; }
+.chip.place { padding-left: 0.75rem; }
+.chip.place[aria-pressed="true"] { padding-left: calc(0.75rem - 1px); }
+.members { font-size: var(--fs-small); color: var(--ink-soft); max-width: var(--measure); margin-top: 0.2rem; }
+.members summary { cursor: pointer; color: var(--lane-green); width: max-content; }
+.members p { margin-top: 0.45rem; }
+.chip { font: inherit; font-size: var(--fs-small); min-height: 2.25rem; color: var(--ink); background: none; border: 1px solid var(--hairline); border-radius: 999px; padding: 0.22rem 0.75rem 0.22rem 0.55rem; cursor: pointer; line-height: 1.3; }
+.chip .dot { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; margin-right: 0.4rem; vertical-align: -0.05rem; border: 1.5px solid var(--c); }
+.chip[aria-pressed="true"] { border: 2px solid var(--c); padding: calc(0.22rem - 1px) calc(0.75rem - 1px) calc(0.22rem - 1px) calc(0.55rem - 1px); }
+.chip[aria-pressed="true"] .dot { background: var(--c); }
+.chip:hover { border-color: var(--ink-soft); }
+.pick-tools { font-size: var(--fs-small); color: var(--ink-soft); }
+.pick-tools button { font: inherit; color: var(--lane-green); background: none; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 0.18em; cursor: pointer; }
+.summary { border-top: 2px solid var(--rule); padding-top: 0.6rem; max-width: var(--measure); font-size: var(--fs-large); line-height: 1.4; }
+.offers { list-style: none; max-width: var(--measure); margin-top: 0.6rem; }
+.offers > li { border-top: 0.5px solid var(--hairline); padding: 0.75rem 0 0.8rem; }
+.offers > li:last-child { border-bottom: 0.5px solid var(--hairline); }
+.offers h3 { font-size: var(--fs-body); font-weight: 700; line-height: 1.3; margin: 0; }
+.offers h3 a { color: var(--ink); text-decoration-thickness: 0.5px; text-underline-offset: 0.18em; }
+.offers h3 .times, .offers .where, .offers .votes { font-weight: 400; color: var(--ink-faint); font-variant-numeric: lining-nums; }
+.offers .where { font-size: var(--fs-small); }
+.offers .for { margin-top: 0.2rem; }
+.offers .for .mark { display: inline-block; width: 0.62rem; height: 0.62rem; border-radius: 50%; background: var(--c); margin-right: 0.4rem; vertical-align: 0.02rem; }
+.offers .for b { font-weight: 400; color: var(--c-text); }
+.offers .votes { font-size: var(--fs-small); margin-top: 0.15rem; }
+.offers li.featured { border-left: 3px solid var(--c); padding-left: 0.85rem; }
+.offers li.featured .new { font-family: var(--caps); text-transform: lowercase; font-variant-caps: small-caps; letter-spacing: 0.04em; color: var(--c-text); font-size: var(--fs-small); display: block; }
+.more { margin-top: 0.8rem; }
+.more button, .other-views a { font: inherit; color: var(--lane-green); background: none; border: 0; padding: 0; text-decoration: underline; text-decoration-thickness: 0.5px; text-underline-offset: 0.18em; cursor: pointer; }
+.status { font-size: var(--fs-small); color: var(--ink-faint); margin-top: 1.6rem; }
+.status.stale { color: var(--sienna-deep); }
+@media (max-width: 640px) { .chip { font-size: 0.95rem; } }
+
+/* round 11: the rankings (two columns, stacked on a phone, the table first) and the bubbles along the ramp */
+.view { margin-top: 2.6rem; }
+.view > h2 { font-size: var(--fs-large); font-weight: 700; border-top: 2px solid var(--rule); padding-top: 0.6rem; }
+.view > .lead { max-width: var(--measure); color: var(--ink-soft); margin-top: 0.3rem; }
+.view h3 { font-size: var(--fs-body); font-weight: 700; margin: 1.1rem 0 0.5rem; }
+.cols { display: grid; grid-template-columns: minmax(0, 11fr) minmax(0, 9fr); gap: 0 2.5rem; }
+@media (max-width: 860px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+table.top { width: 100%; border-collapse: collapse; font-size: var(--fs-small); font-variant-numeric: lining-nums tabular-nums; }
+table.top th { text-align: left; font-weight: 700; color: var(--ink-soft); border-bottom: 1px solid var(--ink); padding: 0.3rem 0.4rem 0.3rem 0; }
+table.top th.n { text-align: right; }
+table.top td { border-bottom: 0.5px solid var(--hairline); padding: 0.45rem 0.4rem 0.45rem 0; vertical-align: top; }
+table.top td.rank { color: var(--ink-faint); width: 1.8rem; }
+table.top td a { color: var(--ink); font-weight: 700; text-decoration-thickness: 0.5px; text-underline-offset: 0.18em; }
+table.top .times, table.top .at { color: var(--ink-faint); font-weight: 400; }
+table.top .at { display: block; }
+table.top td.votes { width: 38%; }
+.bars { display: grid; grid-template-columns: 1fr 1fr; align-items: center; min-height: 1.2rem; }
+.bars .against { justify-self: end; display: flex; align-items: center; gap: 0.3rem; border-right: 1px solid var(--ink-faint); padding-right: 2px; min-height: 1.1rem; }
+.bars .for { display: flex; align-items: center; gap: 0.3rem; padding-left: 2px; }
+.bars i { display: block; height: 0.7rem; border-radius: 1px; }
+.bars .for i { background: var(--rule); }
+.bars .against i { background: var(--ink-faint); }
+.bars b { font-weight: 400; color: var(--ink-soft); }
+ol.types { list-style: none; font-size: var(--fs-small); }
+ol.types li { display: grid; grid-template-columns: minmax(0, 1fr) 7rem; gap: 0.6rem; align-items: center; padding: 0.22rem 0; border-bottom: 0.5px solid var(--hairline); }
+ol.types .n { color: var(--ink-faint); }
+ol.types .bar { display: flex; align-items: center; gap: 0.3rem; color: var(--ink-soft); font-variant-numeric: lining-nums; }
+ol.types .bar i { display: block; height: 0.7rem; background: var(--rule); border-radius: 1px; }
+.squares .fam { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 0.6rem; align-items: start; margin-bottom: 0.45rem; font-size: var(--fs-small); }
+.squares .fam > span { color: var(--ink-soft); text-align: right; line-height: 1.2; }
+.squares .boxes { display: flex; flex-wrap: wrap; gap: 3px; }
+.squares a { display: block; width: 14px; height: 14px; border-radius: 2px; border: 1px solid var(--rule); }
+.squares a.v0 { border-color: var(--ink-faint); background: transparent; }
+.squares a.v1 { background: color-mix(in srgb, var(--rule) 22%, transparent); }
+.squares a.v2 { background: color-mix(in srgb, var(--rule) 48%, transparent); }
+.squares a.v3 { background: color-mix(in srgb, var(--rule) 74%, transparent); }
+.squares a.v4 { background: var(--rule); }
+.squares a:hover, .squares a:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.shade-key { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; font-size: var(--fs-small); color: var(--ink-soft); margin-top: 0.6rem; }
+.shade-key span { display: inline-flex; align-items: center; gap: 0.35rem; }
+.shade-key a { pointer-events: none; }
+@media (max-width: 640px) { .squares .fam { grid-template-columns: minmax(0, 1fr); gap: 0.25rem; } .squares .fam > span { text-align: left; } .squares a { width: 16px; height: 16px; } }
+.chart { position: relative; margin-top: 0.8rem; }
+.chart svg { display: block; width: 100%; height: auto; font-family: var(--serif); overflow: visible; }
+.chart circle.b, .chart line.st { cursor: pointer; }
+.zoom { margin-top: 0.4rem; }
+.zoom svg { display: block; width: 100%; height: auto; touch-action: none; user-select: none; -webkit-user-select: none; }
+.zoom .win { cursor: grab; }
+.zoom .win:focus-visible { outline: none; }
+.zoom .win:focus-visible rect.frame { stroke-width: 3; }
+.zoom .handle { cursor: ew-resize; }
+.zoom-tools { font-size: var(--fs-small); color: var(--ink-faint); margin-top: 0.3rem; }
+.zoom-tools button { font: inherit; color: var(--lane-green); background: none; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 0.18em; cursor: pointer; margin-left: 0.4rem; }
+.tip { position: absolute; z-index: 5; max-width: 16rem; background: var(--paper); border: 1px solid var(--ink); padding: 0.45rem 0.6rem; font-size: var(--fs-small); line-height: 1.35; pointer-events: none; }
+.tip b { display: block; }
+.tip span { color: var(--ink-soft); }
 </style>
 </head>
 <body>
-<main>
-<header><a href="https://sphericalharmonics.org" aria-label="Spherical Harmonics: the website"><img src="logo.png" alt="" width="44" height="44"><span>Spherical Harmonics</span></a></header>
-<h1 id="title">Exit 12N: what the map says so far</h1>
-<p class="meta"><span id="counts">Reading the map</span>. <span id="status">Fetching the live data.</span></p>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="masthead">
+  <button type="button" class="theme-toggle" id="theme-toggle" aria-pressed="false" aria-label="Dark mode" title="Dark mode">
+    <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z"/></svg>
+    <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
+  </button>
+  <div class="masthead-lockup">
+    <h1><a href="/"><img src="/style/brand/exit12n-logo-lockup-transparent.svg" alt="" class="lockup" width="1600" height="390"><span class="visually-hidden">Exit 12N</span></a></h1>
+  </div>
+  <div class="masthead-meta">
+    <span>The closed off-ramp at Riverside Park and West 125th Street</span>
+  </div>
+</header>
+<div class="rule-wrap"><div class="double-rule"></div></div>
+<nav class="section-nav" aria-label="Sections">
+  <a href="/#ramp">The ramp</a>
+  <a href="/#map">The map</a>
+  <a href="/results/" aria-current="page">Results</a>
+  <a href="/data/">Data</a>
+  <a href="/#write">Representatives</a>
+  <a href="/#story">Story</a>
+  <a href="/#thanks">Thanks</a>
+  <a href="/#gallery">Gallery</a>
+  <a class="nav-go" href="/map/">Open the map</a>
+</nav>
+<main id="main" class="container">
+<section class="opening" aria-labelledby="results-head">
+<h2 class="kicker" id="results-head">Results</h2>
+<p>What people proposed on the map and voted for: the proposals ranked by votes, where the changes went, and every proposal along the ramp. Everyone and every part of the ramp is on; switch any of them off to narrow it all down.</p>
+<p class="other-views">The earlier views of the results are still here: <a href="charts/">the charts</a>.</p>
+</section>
 
-<div class="who" id="who" hidden>
-<p><label for="persona">Showing</label> <select id="persona"></select><button type="button" id="persona-prev">Previous</button><button type="button" id="persona-next">Next</button></p>
-<p class="note" id="persona-who"></p>
-<details id="persona-several"><summary>Show several at once</summary><div id="persona-list"></div></details>
+<div class="filters" id="pick">
+<fieldset class="filter"><legend>Who</legend><div class="chips" id="who"></div>
+<details class="members"><summary>Who is in each group</summary><div id="members"></div></details></fieldset>
+<fieldset class="filter"><legend>Where, south to north along the ramp</legend><div class="chips" id="where"></div></fieldset>
+<p class="pick-tools" id="tools" hidden><button type="button" id="everything">Switch everything back on</button></p>
 </div>
 
-<h2 id="the-line"><span class="n">1</span>The line</h2>
-<p class="lead" id="line-lead">&nbsp;</p>
-<div class="chart" id="line"></div>
-<p class="note" id="line-key"></p>
-<details class="how"><summary>How to read this chart</summary><p class="note">The exit is drawn straight, with descriptive location names along it; the rise, the crest and the descent. Places along it are given as stations, the way a road is measured: 0+463 is 463 meters from where the exit leaves the parkway. Above the line, a band's thickness represents the park's width today, from the exit across to the park's far edge, by land cover. Below the line, Proposed shows only what is proposed, on its own wider scale (marked on its side axis) so every proposal can be seen: each proposed path is a band as wide as the ground it would take, and a removal is a green band of the ground that would turn to grass; streams with the same name that touch are one stream, their votes added, and a stream is more opaque the more votes for it it has, net of those against, as a bubble is. A bubble is a proposed thing along the exit, stacked away from the line to avoid overlap; proposals with the same name standing within 40 meters of each other are one bubble with their count beside it (different names never merge), and its hover names them and adds their votes: its colour is its type's colour on the map, its area is in proportion to its footprint, all enlarged by one factor so each can be read, and it is more opaque the more votes for it it has, net of those against. Only paths and removals are bands, and only the part inside the park counts; the bubbles keep Today's scale. Hover or tap anything to see what it is.</p></details>
-<p class="note" id="line-shown"></p>
+<p class="summary" id="summary" aria-live="polite">Reading the map.</p>
 
-<h2 id="the-shortlist"><span class="n">2</span>The shortlist</h2>
-<p class="lead" id="shortlist-lead">&nbsp;</p>
-<div class="chart" id="shortlist"></div>
-<nav class="pager" aria-label="Pages of the shortlist"><button type="button" id="page-prev">Previous</button><span id="page-at" aria-live="polite"></span><button type="button" id="page-next">Next</button></nav>
+<section class="view" aria-labelledby="rank-head">
+<h2 id="rank-head">Rankings</h2>
+<div class="cols">
+<div>
+<h3>Proposals by votes</h3>
+<table class="top" id="top"><thead><tr><th scope="col"><span class="visually-hidden">Rank</span></th><th scope="col">Proposal</th><th scope="col" class="n">Against &middot; For</th></tr></thead><tbody></tbody></table>
+<p class="more" id="top-more" hidden><button type="button" id="top-all"></button></p>
+</div>
+<div>
+<h3>Where the changes went: by type</h3>
+<ol class="types" id="types"></ol>
+<p class="more" id="types-more" hidden><button type="button" id="types-all"></button></p>
+<h3>Every drawing</h3>
+<div class="squares" id="squares"></div>
+<div class="shade-key" id="shade-key"></div>
+</div>
+</div>
+</section>
 
-<h2 id="the-themes"><span class="n">3</span>The themes</h2>
-<p class="lead" id="themes-lead">&nbsp;</p>
-<div class="chart" id="themes"></div>
-<p class="note">
-<span class="key" style="background:#a86b3c"></span>two or more people for it
-<span class="key" style="background:#a86b3c;opacity:.45"></span>one person for it
-<span class="key" style="border:1.2px solid #7a7366"></span>no one for it yet, or as many against
-</p>
-<p class="note">One square is one drawing, in the map's families of ideas. <span id="rules"></span></p>
+<section class="view" aria-labelledby="along-head">
+<h2 id="along-head">Along the ramp</h2>
+<p class="lead">Each circle is a proposed thing, as big as the area it asks for and more solid the more votes it has. Each band above the line is a path people voted for. Hover or tap for names; drag the window under the chart to zoom in.</p>
+<div class="chart" id="along"><div class="tip" id="tip" role="tooltip" hidden></div></div>
+<div class="zoom" id="zoom"></div>
+<p class="zoom-tools" id="zoom-tools"></p>
+</section>
+
+<section class="view" aria-labelledby="offers-head">
+<h2 id="offers-head">What each group gets</h2>
+<ol class="offers" id="offers"></ol>
+<p class="more" id="more" hidden><button type="button" id="show-all"></button></p>
+</section>
+<p class="status" id="status">Fetching the live data.</p>
 </main>
-<div id="tip" hidden></div>
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="wordmark">Exit 12N</div>
+      <p class="foot-tag">A shared map of the closed off-ramp by Riverside Park.</p>
+    </div>
+    <div>
+      <div class="foot-head">The map</div>
+      <ul>
+        <li><a href="/map/">Open the map and vote</a></li>
+        <li><a href="/results/">Results</a></li>
+        <li><a href="/final/">The final map</a></li>
+        <li><a href="/data/">Data</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="foot-head">Contact</div>
+      <ul>
+        <li><a href="mailto:brook@sphericalharmonics.org">brook@sphericalharmonics.org</a></li>
+        <li><a href="mailto:eric@sphericalharmonics.org">eric@sphericalharmonics.org</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="copyright">
+    <span>&copy; 2026 Spherical Harmonics Inc.</span>
+    <span>New York City</span>
+  </div>
+</footer>
+<script>
+// Theme toggle, top right. Light unless the reader picks dark.
+(function () {
+  var button = document.getElementById('theme-toggle');
+  if (!button) return;
+  var sync = function () {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    button.setAttribute('aria-pressed', String(dark));
+    button.setAttribute('aria-label', dark ? 'Light mode' : 'Dark mode');
+    button.title = dark ? 'Light mode' : 'Dark mode';
+  };
+  button.addEventListener('click', function () {
+    var dark = document.documentElement.dataset.theme !== 'dark';
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    try { localStorage.setItem('sh-theme', dark ? 'dark' : 'light'); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
+</script>
 <script type="module" src="page.js"></script>
 </body>
 </html>
