@@ -114,17 +114,105 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Page not found: Exit 12N</title>
 <meta name="robots" content="noindex">
-<style>
-:root { --ink: #1a1a1a; --paper: #ffffff; --link: #1a56db; }
-@media (prefers-color-scheme: dark) { :root { --ink: #ececec; --paper: #151515; --link: #7aa7ff; } }
-body { margin: 0; background: var(--paper); color: var(--ink); font: 18px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
-main { max-width: 38rem; margin: 0 auto; padding: 3rem 1rem; }
-a { color: var(--link); }
-</style>
+<link rel="preload" href="/style/fonts/lmroman12-regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style/site.css?v=20261123a">
+<meta name="theme-color" content="#faf3e5">
+<meta name="color-scheme" content="light">
+<script>
+// Light by default; a reader's own choice (the toggle, top right) is remembered in this browser and applied before first paint.
+(function () {
+  var theme = 'light';
+  try { if (localStorage.getItem('sh-theme') === 'dark') theme = 'dark'; } catch (e) {}
+  document.documentElement.dataset.theme = theme;
+  if (theme === 'dark') {
+    document.querySelector('meta[name="theme-color"]').content = '#18130d';
+    document.querySelector('meta[name="color-scheme"]').content = 'dark';
+  }
+})();
+</script>
+<link rel="icon" href="/logo.png">
 </head>
 <body>
-<main>
-<p>There is no page here. Try the <a href="/">Exit 12N front page</a>, <a href="/map/">the map</a> or <a href="/results/">the results</a>.</p>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="masthead">
+  <button type="button" class="theme-toggle" id="theme-toggle" aria-pressed="false" aria-label="Dark mode" title="Dark mode">
+    <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z"/></svg>
+    <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
+  </button>
+  <div class="masthead-lockup">
+    <a href="/"><img src="/logo.png" alt="Spherical Harmonics logo: a carved wooden sphere with a brass harmonica at its equator" class="logo" width="72" height="72"></a>
+    <h1><a href="/">Exit 12N</a></h1>
+  </div>
+  <div class="masthead-meta">
+    <span>The closed off-ramp at Riverside Park and West 125th Street</span>
+    <span>A project of <a href="https://sphericalharmonics.org">Spherical Harmonics</a></span>
+  </div>
+</header>
+<div class="rule-wrap"><div class="double-rule"></div></div>
+<nav class="section-nav" aria-label="Sections">
+  <a href="/#ramp">The ramp</a>
+  <a href="/#map">The map</a>
+  <a href="/#results">Results</a>
+  <a href="/data/">Data</a>
+  <a href="/#write">Representatives</a>
+  <a href="/#story">Story</a>
+  <a href="/#thanks">Thanks</a>
+  <a href="/#gallery">Gallery</a>
+  <a class="nav-go" href="/map/">Open the map</a>
+</nav>
+<main class="container" id="main">
+  <section class="opening">
+    <h2 class="kicker">Page not found</h2>
+    <p>There is no page here. Try the <a href="/">Exit 12N front page</a>, <a href="/map/">the map</a> or <a href="/results/">the results</a>.</p>
+  </section>
 </main>
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="wordmark">Exit 12N</div>
+      <p class="foot-tag">A shared map of the closed off-ramp by Riverside Park, from <a href="https://sphericalharmonics.org">Spherical Harmonics</a>, a civic technology nonprofit in New York.</p>
+    </div>
+    <div>
+      <div class="foot-head">The map</div>
+      <ul>
+        <li><a href="/map/">Open the map and vote</a></li>
+        <li><a href="/results/">Results</a></li>
+        <li><a href="/final/">The final map</a></li>
+        <li><a href="/data/">Data</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="foot-head">Contact</div>
+      <ul>
+        <li><a href="mailto:brook@sphericalharmonics.org">brook@sphericalharmonics.org</a></li>
+        <li><a href="mailto:eric@sphericalharmonics.org">eric@sphericalharmonics.org</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="copyright">
+    <span>&copy; 2026 Spherical Harmonics Inc.</span>
+    <span>New York City</span>
+  </div>
+</footer>
+<script>
+// Theme toggle, top right. Light unless the reader picks dark.
+(function () {
+  var button = document.getElementById('theme-toggle');
+  if (!button) return;
+  var sync = function () {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    button.setAttribute('aria-pressed', String(dark));
+    button.setAttribute('aria-label', dark ? 'Light mode' : 'Dark mode');
+    button.title = dark ? 'Light mode' : 'Dark mode';
+  };
+  button.addEventListener('click', function () {
+    var dark = document.documentElement.dataset.theme !== 'dark';
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    try { localStorage.setItem('sh-theme', dark ? 'dark' : 'light'); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
+</script>
 </body>
 </html>
