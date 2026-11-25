@@ -119,7 +119,7 @@
 <meta property="og:description" content="The closed off-ramp by Riverside Park, and what neighbors could make of it. Draw a proposal, vote on others, see what the map says.">
 <meta property="og:url" content="https://exit12n.org/">
 <link rel="preload" href="/style/fonts/dm-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/style/site.css?v=20261124g">
+<link rel="stylesheet" href="/style/site.css?v=20261124h">
 <meta name="theme-color" content="#ffffff">
 <meta name="color-scheme" content="light">
 <script>
@@ -159,12 +159,12 @@
   <a href="/#ramp">The ramp</a>
   <a href="/#map">The map</a>
   <a href="/#results">Results</a>
-  <a href="/data/">Data</a>
+  <a href="/#data">Data</a>
   <a href="/#write">Representatives</a>
   <a href="/#story">Story</a>
   <a href="/#thanks">Thanks</a>
   <a href="/#gallery">Gallery</a>
-  <a class="nav-go" href="/map/">Open the map</a>
+  <a class="nav-go" href="/map/?mode=vote">Open the map and vote</a>
 </nav>
 
 <article class="lead-post" aria-labelledby="lead-post-head">
@@ -176,14 +176,14 @@
   <p class="drop">Exit 12N is the northbound off-ramp from the Henry Hudson Parkway to West 125th Street. It sits on parkland between the parkway and Riverside Park, near the 119th Street tennis courts and St. Clair Place, above an Amtrak tunnel. It closed to cars in July 2025. Walkers, cyclists, skateboarders and birders have used it since.</p>
   <p>Transportation Alternatives, Spherical Harmonics and Open Plans are asking together whether it could go back to the community, as a place to walk and gather or as green space that helps the riverside withstand a changing climate. Neighbors were there first: the community board&rsquo;s parks committee heard their plan in February 2025.</p>
   <p>An online workshop on November 4 gave the map its first public test. On November 22 the three partners held a walk to the ramp, then a workshop at Columbia&rsquo;s Center for Smart Streetscapes. The north end proved the hard part: it is steep and has no ramp, so people in wheelchairs or walking bikes must detour. People proposed composting, basketball, a bike lane through to 125th Street, separate paths for walkers and cyclists, a learn-to-ride area, a pollinator meadow, film screenings, bouldering on the cliff and a fishing pier.</p>
-  <p>What the map gathers goes to two Community Board 9 committees in December. The map decides nothing; it shows what people would like, so that those who decide, and everyone else, can look at it together. To see the proposals or add your own, <a href="/map/">open the map</a>.</p>
+  <p>What the map gathers goes to two Community Board 9 committees in December. The map decides nothing; it shows what people would like, so that those who decide, and everyone else, can look at it together. To see the proposals or add your own, <a href="/map/?mode=vote">open the map and vote</a>.</p>
 </article>
 
 <aside class="demo-bar" aria-label="Open the map">
   <p class="demo-copy">
     <span class="demo-line">Draw a proposal for the ramp.<br>Vote on your neighbors&rsquo; proposals.</span>
   </p>
-  <a class="demo-button" href="/map/">Open the map</a>
+  <a class="demo-button" href="/map/?mode=vote">Open the map and vote</a>
   <span class="tally" id="count" hidden></span>
 </aside>
 
@@ -213,16 +213,15 @@
         <p>Exit 12N is a map you can use on a phone or a laptop. It shows the ramp and the streets and the park around it in 3D, as they are today. You can place something on it, such as a garden, a bench, a ball court or a bike lane, or draw a path, and you can add your vote to what others have drawn. A drawing with many votes behind it is easy to see, and so is one that only a few people want.</p>
         <p>The map does not decide anything. It shows what people would like to see, so that the people who do decide, and everyone else, can look at it together.</p>
         <p>To add your voice, open the map, find a drawing and press the plus or the minus. You do not need an account. If you want to draw something of your own, use the add button on the map and choose what to put down. You can take a vote back later.</p>
-        <p><a href="/map/" class="btn btn-primary">Open the map and vote</a></p>
+        <p><a href="/map/?mode=vote" class="btn btn-primary">Open the map and vote</a></p>
       </div>
     </details>
 
     <details class="sec" id="results">
       <summary><span class="num">&sect;3</span><h2><span class="title">Results</span> <span class="gist">What the map says so far</span></h2></summary>
-      <div class="sec-body">
-        <p>The results page reads the live votes and shows them along the length of the ramp, one kind of neighbor at a time: someone who walks, someone who climbs, someone who gardens, someone who plays ball. It updates as people vote.</p>
-        <p><a href="/results/" class="btn btn-primary">See the results</a></p>
-        <p class="aside">Short analyses of public data about the ramp and the streets around it are collected under <a href="/data/">Data</a>.</p>
+      <div class="sec-body wide">
+        <p>The live votes, along the length of the ramp and ranked, for walkers, gardeners, kids and everyone else. It updates as people vote.</p>
+        <div class="results-inline" id="results-inline"><p class="aside" id="results-loading">Loading the results.</p></div>
       </div>
     </details>
 
@@ -298,6 +297,14 @@
         </div>
       </div>
     </details>
+
+    <details class="sec" id="data">
+      <summary><span class="num">&sect;8</span><h2><span class="title">Data</span> <span class="gist">Public data about the ramp</span></h2></summary>
+      <div class="sec-body">
+        <p>Short analyses of public data about the ramp and the streets around it. Each one asks a single question, shows the numbers in a chart or two, and names its sources so that anyone can check it.</p>
+        <p class="aside">No analyses are published yet. The first one is in preparation.</p>
+      </div>
+    </details>
   </div>
 </main>
 
@@ -310,10 +317,10 @@
     <div>
       <div class="foot-head">The map</div>
       <ul>
-        <li><a href="/map/">Open the map and vote</a></li>
-        <li><a href="/results/">Results</a></li>
+        <li><a href="/map/?mode=vote">Open the map and vote</a></li>
+        <li><a href="/#results">Results</a></li>
         <li><a href="/final/">The final map</a></li>
-        <li><a href="/data/">Data</a></li>
+        <li><a href="/#data">Data</a></li>
       </ul>
     </div>
     <div>
@@ -377,7 +384,27 @@
     if (sec) sec.open = true;
   });
   window.addEventListener('hashchange', openFromHash);
+  // Results open in place (Eric, 11/24 21:29: every section but the map expands on the page): the results page itself, in a
+  // frame as tall as its content (it says its height), loaded the first time the section opens; /results/ stays its own address.
+  var results = document.getElementById('results'), frame = null;
+  function loadResults() {
+    if (frame || !results.open) return;
+    frame = document.createElement('iframe');
+    frame.src = '/results/?embed=1';
+    frame.title = 'Results';
+    frame.className = 'results-frame';
+    frame.setAttribute('scrolling', 'no');
+    document.getElementById('results-inline').appendChild(frame);
+    frame.addEventListener('load', function () { var l = document.getElementById('results-loading'); if (l) l.remove(); });
+  }
+  window.addEventListener('message', function (e) {
+    if (!frame || e.source !== frame.contentWindow || e.origin !== location.origin) return;
+    var h = e.data && e.data.exit12nResultsHeight;
+    if (typeof h === 'number' && h > 0) frame.style.height = Math.ceil(h) + 'px';
+  });
+  results.addEventListener('toggle', loadResults);
   openFromHash();
+  loadResults();
   syncToggle();
 })();
 (function () {

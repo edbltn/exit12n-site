@@ -324,3 +324,7 @@ footer li { font-size: var(--fs-small); margin-bottom: 0.2rem; }
 }
 /* Campaign look: headings in the event blue. */
 .lead-post h2, details.sec > summary h2 .title, .post h1, .post h2 { color: var(--sienna-deep); }
+
+/* Results in place on the front page (Eric, 11/24 21:29): the results page in a frame as tall as its content */
+.results-inline { margin-top: 0.8rem; }
+.results-frame { display: block; width: 100%; min-height: 70vh; border: 0; background: transparent; }
