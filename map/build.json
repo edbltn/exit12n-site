@@ -1,5 +1,5 @@
 {
- "build": "20261125T161536Z-086f143",
+ "build": "20261125T165127Z-45ab29d",
  "entry": "assets/index-DECWitPr.js",
  "css": [
   "assets/index-D0-K59Iu.css"
@@ -11,6 +11,6 @@
  },
  "content": "21628d07ba98f9100be521ae5dee2b335cb61d564744c43d6b7571b990e5dcec",
  "env": "production",
- "commit": "086f143c82d5e4e8f7e2973166c362d08012cd48",
+ "commit": "45ab29d49c5417623a904980ddc4d0be09a21cf6",
  "area": ""
 }
