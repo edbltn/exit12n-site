@@ -90,3 +90,17 @@ export function lanes(streams) {
   }
   return out;
 }
+
+/** One page of a list (round 12, Eric 11/24 21:23: pages instead of "Show all"): the page clamped into range, its rows,
+ *  how many pages, and the 1-based numbers of its first and last row (0 and 0 when the list is empty). */
+export function pageOf(list, page, per) {
+  const pages = Math.max(1, Math.ceil(list.length / per));
+  const k = Math.max(0, Math.min(pages - 1, page | 0));
+  const rows = list.slice(k * per, (k + 1) * per);
+  return { rows, page: k, pages, from: rows.length ? k * per + 1 : 0, to: k * per + rows.length, total: list.length };
+}
+
+/** A diverging bar's length in % of its half: the most votes either way fill 85%, and one vote is never under 4%. */
+export function halfBar(n, most) {
+  return n > 0 ? Math.max(4, Math.round((n / Math.max(1, most)) * 85 * 10) / 10) : 0;
+}

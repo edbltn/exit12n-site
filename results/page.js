@@ -6,13 +6,29 @@
 import { bubbleOpacity, build, rank, themes, where } from "./charts/model.js";
 import { offers, voteWords } from "./offers.js";
 import { formatHash, parseHash, sectionOf } from "./filters.js";
-import { alongRamp, byType, clampWindow, keep, labelled, lanes, radius, voteStep } from "./views.js";
+import { alongRamp, byType, clampWindow, halfBar, keep, labelled, lanes, pageOf, radius, voteStep } from "./views.js";
 
 const REFRESH_S = 15;
 const API = "https://exit12n-api-katze52zaq-uc.a.run.app/api/submissions";
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
 const SOURCES = LOCAL ? ["api/submissions", API] : [API];
 const FIRST = 10; // rows shown before "Show all", in each list
+/** A proposal on the live map, as its share link opens it (Eric, 11/24 21:26: the links resolve to production, wherever
+ *  this page is served): the map at exit12n.org/map/, `?p=` the proposal's whole id (82-link-to-a-proposal reads it). */
+const MAP = "https://exit12n.org/map/";
+const mapLink = (id) => `${MAP}?p=${encodeURIComponent(id)}`;
+/** Proposals by votes, a page at a time (round 12): twenty in two tables of ten side by side; ten, one table, on a phone. */
+const ONE_COLUMN = "(max-width: 860px)";
+const perPage = () => (matchMedia(ONE_COLUMN).matches ? 10 : 20);
+let topPage = 0;
+/** In place on the front page (?embed=1): its frame takes the height we say, so the page around it scrolls, not the frame. */
+const EMBED = document.documentElement.classList.contains("embed");
+function sayHeight() {
+  if (!EMBED || window.parent === window) return;
+  const main = document.querySelector("main");
+  const h = main.getBoundingClientRect().bottom + scrollY + 24;
+  window.parent.postMessage({ exit12nResultsHeight: h }, location.origin);
+}
 
 const $ = (id) => document.getElementById(id);
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -65,16 +81,25 @@ const more = (key, n, total) => {
 // ---------- the rankings ----------
 function drawTop(groups) {
   const ranked = rank(groups);
-  const shown = open.top ? ranked : ranked.slice(0, FIRST);
+  const per = perPage();
+  const pg = pageOf(ranked, topPage, per);
+  topPage = pg.page;
   const most = Math.max(1, ...ranked.map((g) => Math.max(g.for, g.against)));
-  const bar = (n) => `<i style="width:${((n / most) * 100).toFixed(1)}%"></i>`;
-  $("top").tBodies[0].innerHTML = shown.map((g, i) => {
+  const bar = (n) => `<i style="width:${halfBar(n, most)}%"></i>`;
+  const row = (g, rankNo) => {
     const sec = data.sections.find((s) => s.id === sectionOf(g, data.sections));
     const times = g.members.length > 1 ? ` <span class="times">×${g.members.length}</span>` : "";
-    return `<tr><td class="rank">${i + 1}</td><td><a href="/map/?p=${encodeURIComponent(g.id)}">${esc(g.name)}</a>${times}<span class="at">${esc(sec.off ? sec.name : `${sec.name}: ${where(g, park)}`)}</span></td>` +
+    return `<tr><td class="rank">${rankNo}</td><td><a href="${mapLink(g.id)}" target="_top">${esc(g.name)}</a>${times}<span class="at">${esc(sec.off ? sec.name : `${sec.name}: ${where(g, park)}`)}</span></td>` +
       `<td class="votes" aria-label="${esc(voteWords(g.for, g.against))}"><div class="bars"><span class="against">${g.against ? `<b>${g.against}</b>${bar(g.against)}` : ""}</span><span class="for">${g.for ? `${bar(g.for)}<b>${g.for}</b>` : ""}</span></div></td></tr>`;
-  }).join("") || `<tr><td></td><td>Nothing here yet.</td><td></td></tr>`;
-  more("top", FIRST, ranked.length);
+  };
+  const left = pg.rows.slice(0, 10), right = pg.rows.slice(10);
+  $("top").tBodies[0].innerHTML = left.map((g, i) => row(g, pg.from + i)).join("") || `<tr><td></td><td>Nothing here yet.</td><td></td></tr>`;
+  $("top2").tBodies[0].innerHTML = right.map((g, i) => row(g, pg.from + 10 + i)).join("");
+  $("top2").hidden = !right.length;
+  const nums = Array.from({ length: pg.pages }, (_, k) => `<button type="button" data-page="${k}"${k === pg.page ? ' aria-current="page"' : ""} aria-label="Page ${k + 1}">${k + 1}</button>`).join("");
+  $("top-pages").innerHTML = pg.pages > 1
+    ? `<button type="button" data-page="${pg.page - 1}"${pg.page === 0 ? " disabled" : ""}>Previous</button>${nums}<button type="button" data-page="${pg.page + 1}"${pg.page === pg.pages - 1 ? " disabled" : ""}>Next</button><span class="count">${pg.from}–${pg.to} of ${pg.total}</span>`
+    : pg.total ? `<span class="count">${pg.total} ${pg.total === 1 ? "proposal" : "proposals"}</span>` : "";
 }
 
 function drawTypes(items) {
@@ -90,7 +115,7 @@ function drawSquares(items) {
   const rows = themes(items, park);
   const tip = (it) => `${it.name}: ${voteWords(it.for, it.against)}`;
   $("squares").innerHTML = rows.map((r) => `<div class="fam"><span>${esc(r.label)}</span><div class="boxes">` +
-    r.items.map((it) => `<a class="v${voteStep(it.for)}" href="/map/?p=${encodeURIComponent(it.id)}" title="${esc(tip(it))}" aria-label="${esc(tip(it))}"></a>`).join("") + `</div></div>`).join("");
+    r.items.map((it) => `<a class="v${voteStep(it.for)}" href="${mapLink(it.id)}" target="_top" title="${esc(tip(it))}" aria-label="${esc(tip(it))}"></a>`).join("") + `</div></div>`).join("");
   $("shade-key").innerHTML = ["no one for it yet", "1 person for it", "2", "3", "4 or more"].map((t, i) => `<span><a class="v${i}" aria-hidden="true"></a>${t}</span>`).join("");
   $("shade-key").classList.add("squares");
 }
@@ -264,7 +289,7 @@ function drawOffers(inAt) {
     const sec = data.sections.find((s) => s.id === sectionOf(g, data.sections));
     return `<li${star ? ` class="featured" style="--c:${colour(star)};--c-text:${colour(star)}"` : ""}>` +
       (star ? `<span class="new">${esc(data.featuredNote?.[star.id] ?? "New")}</span>` : "") +
-      `<h3><a href="/map/?p=${encodeURIComponent(g.id)}">${esc(g.name)}</a>${times}</h3>` +
+      `<h3><a href="${mapLink(g.id)}" target="_top">${esc(g.name)}</a>${times}</h3>` +
       `<div class="where">${esc(sec.off ? sec.name : `${sec.name}: ${where(g, park)}`)}</div>` +
       r.serves.map((s) => {
         const p = P(s.id);
@@ -331,6 +356,7 @@ function set(nextWho, nextAt) {
   who = data.personas.filter((p) => nextWho.includes(p.id)).map((p) => p.id);
   at = data.sections.filter((s) => nextAt.includes(s.id)).map((s) => s.id);
   open.top = open.types = open.offers = false;
+  topPage = 0;
   history.replaceState(null, "", formatHash(who, at, data.personas, data.sections) || location.pathname + location.search);
   if (model) render();
   else drawPicker();
@@ -348,7 +374,14 @@ async function start() {
     else if (chip?.dataset.at) set(who, toggle(at, chip.dataset.at));
     else if (e.target.id === "everything") set(data.personas.map((p) => p.id), data.sections.map((s) => s.id));
   });
-  for (const key of ["top", "types"]) $(`${key}-all`).addEventListener("click", () => { open[key] = !open[key]; render(); });
+  $("types-all").addEventListener("click", () => { open.types = !open.types; render(); });
+  $("top-pages").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-page]");
+    if (!b || b.disabled) return;
+    topPage = Number(b.dataset.page);
+    drawTop(keep(model.groups, data, who, at));
+    $("rank-head").scrollIntoView({ block: "nearest" });
+  });
   $("show-all").addEventListener("click", () => { open.offers = !open.offers; render(); });
   $("zoom-tools").addEventListener("click", (e) => { if (e.target.id === "zoom-all") { win = null; drawAlong(); } });
   // hover (a mouse) or tap (a finger) names a bubble or a stream
@@ -363,7 +396,9 @@ async function start() {
   new MutationObserver(() => model && render()).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   let width = innerWidth;
   addEventListener("resize", () => { if (innerWidth !== width && model) { width = innerWidth; render(); } });
+  if (EMBED) { new ResizeObserver(sayHeight).observe(document.querySelector("main")); addEventListener("load", sayHeight); }
   await refresh();
+  sayHeight();
   setInterval(refresh, REFRESH_S * 1000);
 }
 start();
