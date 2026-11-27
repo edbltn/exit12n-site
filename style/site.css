@@ -191,6 +191,7 @@ h1 { font-family: var(--display); letter-spacing: -0.01em; }
 /* The one open block, above the numbered sections. */
 .opening { border-top: 2px solid var(--rule); padding-top: 0.6rem; margin-bottom: 2.25rem; }
 .opening p { max-width: var(--measure); margin-top: 0.7rem; font-size: var(--fs-large); line-height: 1.45; hyphens: auto; }
+.opening .join a[href^="mailto:"] { hyphens: none; overflow-wrap: anywhere; } /* an address must not gain a hyphen when it wraps */
 
 /* ---------- Collapsible numbered sections ---------- */
 .toolbar { display: flex; justify-content: space-between; align-items: baseline; border-top: 2px solid var(--rule); padding-top: 0.6rem; margin-bottom: 0.1rem; }
