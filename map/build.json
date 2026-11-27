@@ -1,16 +1,16 @@
 {
- "build": "20261127T200501Z-84e89a7",
- "entry": "assets/index-CIsYHfmX.js",
+ "build": "20261127T210247Z-37fc2ac",
+ "entry": "assets/index-DQlobyYT.js",
  "css": [
   "assets/index-DvNeBVub.css"
  ],
  "integrity": {
   "assets/20-route-in-a-worker-B0UnfRj9.js": "sha384-mk4quRvHbHshlW6a7Xi+PosGnovm3LGG2XY2x5/7Q2nYDi5ORX12UBS2XoYA97iv",
-  "assets/index-CIsYHfmX.js": "sha384-9Yu4q2lJrNdGT3SjBLYTdASyj7MhpvQiVJ+Qz3EFa/Z7lWm4tNjZHF1rnoESDR4C",
+  "assets/index-DQlobyYT.js": "sha384-dWtYDt16Wb+rMpHof/3be6pS4ipqUvc2fwt7woMDgq+jqQ+zWHN61Zcx5FGWCnSa",
   "assets/index-DvNeBVub.css": "sha384-iSaJ5mSC2n8yWUqrkG2YnJzVUVNegpmjjR3J+OBwDJvjc32a6iDvDLsFABAZkHTv"
  },
- "content": "98af391229dcdbd75bb432cdf2e4144a0d9a4353a0f9dcbe892d05c40e781746",
+ "content": "a67274aac17d86bb76efab645bbe25206737c1c0d23934061f85da93e4761f55",
  "env": "production",
- "commit": "84e89a7ae3f39ba173704838078798fcbb39dbab",
+ "commit": "37fc2ac0521d61969a9194fa92c4f48020641508",
  "area": ""
 }
