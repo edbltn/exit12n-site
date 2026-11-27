@@ -1,16 +1,16 @@
 {
- "build": "20261127T200141Z-623b94c",
- "entry": "assets/index-DECWitPr.js",
+ "build": "20261127T200501Z-84e89a7",
+ "entry": "assets/index-CIsYHfmX.js",
  "css": [
-  "assets/index-D0-K59Iu.css"
+  "assets/index-DvNeBVub.css"
  ],
  "integrity": {
   "assets/20-route-in-a-worker-B0UnfRj9.js": "sha384-mk4quRvHbHshlW6a7Xi+PosGnovm3LGG2XY2x5/7Q2nYDi5ORX12UBS2XoYA97iv",
-  "assets/index-D0-K59Iu.css": "sha384-3/DHDjCHcDALfIRMKcW2JnXlsNso6KVU1NuyAo3Jv0xb+hJOzxuy9XX2kxBFExiM",
-  "assets/index-DECWitPr.js": "sha384-2wxaTtfM8mydfQs4RuztoUHYxxQIXGEHGL7KOnl+UDGdT0wgOajrNekQKFx/b9eL"
+  "assets/index-CIsYHfmX.js": "sha384-9Yu4q2lJrNdGT3SjBLYTdASyj7MhpvQiVJ+Qz3EFa/Z7lWm4tNjZHF1rnoESDR4C",
+  "assets/index-DvNeBVub.css": "sha384-iSaJ5mSC2n8yWUqrkG2YnJzVUVNegpmjjR3J+OBwDJvjc32a6iDvDLsFABAZkHTv"
  },
- "content": "21628d07ba98f9100be521ae5dee2b335cb61d564744c43d6b7571b990e5dcec",
+ "content": "98af391229dcdbd75bb432cdf2e4144a0d9a4353a0f9dcbe892d05c40e781746",
  "env": "production",
- "commit": "623b94cb3859340480d454887feabeb504a3b4e9",
+ "commit": "84e89a7ae3f39ba173704838078798fcbb39dbab",
  "area": ""
 }
